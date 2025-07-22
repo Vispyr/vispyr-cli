@@ -2,10 +2,13 @@
 
 import { Command } from 'commander';
 import figlet from 'figlet';
-import inquirer from 'inquirer';
 import chalk from 'chalk';
 
+import deploy from './commands/deploy.js';
+import teardown from './commands/teardown.js';
+
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
+console.log('');
 
 const program = new Command();
 
@@ -19,40 +22,14 @@ program
   .option('-t, --touch <value>', 'Create a file');
 
 program
-  .command('list')
-  .description('List all items')
-  .action(() => {
-    console.log('Listing items...');
-  });
+  .command('deploy')
+  .description('Deploys AWS architecture')
+  .action(deploy);
 
 program
-  .command('create')
-  .description('Creates an item')
-  .action(async () => {
-    const answers = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'name',
-        message: 'Enter the item name:',
-        validate: (input) =>
-          input.length >= 3
-            ? true
-            : 'The name must be at least 3 characters long.',
-      },
-      {
-        type: 'list',
-        name: 'type',
-        message: 'Select the item type:',
-        choices: ['default', 'special', 'custom'],
-      },
-    ]);
-
-    console.log(
-      chalk.green(
-        `Successfully created item "${answers.name}" of type "${answers.type}"`
-      )
-    );
-  });
+  .command('teardown')
+  .description('Teardown AWS architecture')
+  .action(teardown);
 
 program.parse();
 

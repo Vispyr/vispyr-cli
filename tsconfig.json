@@ -1,19 +1,4 @@
 {
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
-    "strict": true,
-    "target": "ES2022",
-    "module": "ES2022",
-    "sourceMap": true,
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true
-  }
+  "files": [],
+  "references": [{ "path": "./src" }, { "path": "./cdk" }]
 }
