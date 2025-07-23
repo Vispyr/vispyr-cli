@@ -1,6 +1,6 @@
 import { input, select } from '@inquirer/prompts';
 import ora from 'ora';
-import { saveConfig } from '../utils/config';
+import { saveConfig } from '../utils/config.js';
 
 const awsRegions = [
   'us-east-1',
