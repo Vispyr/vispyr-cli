@@ -6,6 +6,7 @@ import chalk from 'chalk';
 
 import deploy from './commands/deploy.js';
 import teardown from './commands/teardown.js';
+import init from './commands/init.js';
 
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
@@ -20,6 +21,8 @@ program
   .option('-l, --ls [value]', 'List directory contents')
   .option('-m, --mkdir <value>', 'Create a directory')
   .option('-t, --touch <value>', 'Create a file');
+
+program.command('init').description('Configures AWS Credentials').action(init);
 
 program
   .command('deploy')

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": ".",
-    "outDir": "../dist",
+    "outDir": "../dist/cdk",
     "strict": true,
     "target": "ES2022",
     "module": "ES2022",
@@ -14,5 +14,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
-  }
+  },
+  "include": ["**/*.ts"]
 }
