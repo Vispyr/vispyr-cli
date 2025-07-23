@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { AWSConfigType, AWSCredentialsType } from '../types';
 
-// could probably abstract more
 export const saveConfig = (
   credentials: AWSCredentialsType,
   config: AWSConfigType
@@ -12,7 +11,6 @@ export const saveConfig = (
 };
 
 const writeToFile = (file: string, data: string) => {
-  // fix this any
   const filePath = path.resolve(process.cwd(), `.aws/${file}`);
 
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
