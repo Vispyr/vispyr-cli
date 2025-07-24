@@ -23,4 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# AWS
+cdk.context.json
 .aws
+cdk.out

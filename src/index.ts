@@ -32,7 +32,7 @@ program
 program
   .command('teardown')
   .description('Teardown AWS architecture')
-  .action(teardown);
+  .action(() => teardown('Ec2Stack'));
 
 program.parse();
 

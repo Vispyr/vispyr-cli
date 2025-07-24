@@ -20,8 +20,6 @@ const writeToFile = (file: string, data: string) => {
 const toIniFormat = (obj: AWSCredentialsType | AWSConfigType) => {
   return [
     '[default]',
-    ...Object.entries(obj).map(
-      ([key, value]) => `${key.toUpperCase()}=${value}`
-    ),
+    ...Object.entries(obj).map(([key, value]) => `${key}=${value}`),
   ].join('\n');
 };
