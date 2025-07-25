@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+package-lock.json
 
 # Editor directories and files
 .vscode/*
@@ -28,3 +29,7 @@ dist-ssr
 cdk.context.json
 .aws
 cdk.out
+outputs.json
+
+# Delete later
+.important_data

@@ -32,13 +32,8 @@ type Region =
   | 'me-central-1'
   | 'sa-east-1';
 
-export interface AWSCredentialsType {
+export interface AWSConfigType {
   aws_access_key_id: string;
   aws_secret_access_key: string;
-  aws_session_token?: string;
-}
-
-export interface AWSConfigType {
-  region: Region | unknown;
-  output?: string; // json, text, etc
+  aws_region: Region | unknown;
 }

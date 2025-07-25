@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import { Command } from 'commander';
 import figlet from 'figlet';
 import chalk from 'chalk';
 
 import deploy from './commands/deploy.js';
-import teardown from './commands/teardown.js';
+import destroy from './commands/destroy.js';
 import init from './commands/init.js';
 
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
@@ -30,9 +31,9 @@ program
   .action(deploy);
 
 program
-  .command('teardown')
-  .description('Teardown AWS architecture')
-  .action(() => teardown('Ec2Stack'));
+  .command('destroy')
+  .description('Destroy AWS architecture')
+  .action(destroy);
 
 program.parse();
 

@@ -43,16 +43,19 @@ export class Ec2Stack extends Stack {
 
     const userData = UserData.forLinux();
     userData.addCommands(
+      '#!/bin/bash',
       'yum update -y',
-      'yum install -y docker',
-      'systemctl enable docker',
+      'yum install -y docker git',
       'systemctl start docker',
-      'usermod -aG docker ec2-user',
-      'docker run -d --name grafana -p 3000:3000 grafana/grafana',
-      'docker run -d --name prometheus -p 9090:9090 prom/prometheus',
-      'docker run -d --name tempo -p 4317:4317 grafana/tempo',
-      'docker run -d --name pyroscope -p 4040:4040 grafana/pyroscope',
-      'docker run -d --name alloy grafana/alloy'
+      'systemctl enable docker',
+      'usermod -a -G docker ec2-user',
+      'curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose',
+      'chmod +x /usr/local/bin/docker-compose',
+      'cd /home/ec2-user',
+      `git clone https://${process.env.PERSONAL_ACCESS_TOKEN}@github.com/Vispyr/vispyr-backend.git`,
+      'chown -R ec2-user:ec2-user vispyr-backend',
+      'cd vispyr-backend',
+      '/usr/local/bin/docker-compose up -d'
     );
 
     // const key = KeyPair.fromKeyPairName(this, 'Key', 'vispyr-key');
@@ -67,8 +70,15 @@ export class Ec2Stack extends Stack {
       // keyPair: key
     });
 
+    new CfnOutput(this, 'InstanceId', {
+      value: instance.instanceId,
+      exportName: 'InstanceId',
+      description: 'Instance ID of the monitoring EC2 instance',
+    });
+
     new CfnOutput(this, 'InstancePublicIP', {
       value: instance.instancePublicIp,
+      exportName: 'InstancePublicIP',
       description: 'Public IP of the monitoring EC2 instance',
     });
   }

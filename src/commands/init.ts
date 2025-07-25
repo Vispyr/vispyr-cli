@@ -45,12 +45,12 @@ export const init = async () => {
     choices: awsRegions,
   });
 
-  const credentials = {
+  const config = {
     aws_access_key_id: accessKeyId,
     aws_secret_access_key: secretAccessKey,
+    aws_region: region,
+    initialized: true,
   };
-
-  const config = { region };
 
   const spinner = ora({
     text: 'Saving AWS Credentials...',
@@ -58,7 +58,7 @@ export const init = async () => {
     spinner: 'bouncingBall',
   }).start();
 
-  saveConfig(credentials, config);
+  saveConfig(config);
 
   await new Promise((res) => setTimeout(res, 3000));
   if (true) {
