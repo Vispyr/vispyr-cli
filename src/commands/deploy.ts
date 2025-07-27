@@ -7,6 +7,7 @@ import fs from 'fs';
 import { promisify } from 'util';
 import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import init from './init.js';
+import { hasCredentials } from '../utils/config.js';
 
 const execAsync = promisify(exec);
 
@@ -159,18 +160,18 @@ const showServiceInfo = (httpsEndpoint: string, publicIp: string): void => {
   );
 
   console.log(chalk.blue('\n📋 Next Steps:'));
-  console.log(chalk.white('1. Open the Grafana URL in your browser'));
+  console.log(
+    chalk.white('1. Open the Grafana UI:'),
+    chalk.green(httpsEndpoint)
+  );
   console.log(
     chalk.white(
       '2. Accept the security warning for the self-signed certificate'
     )
   );
-  console.log(
-    chalk.white(
-      '3. Log in to Grafana (check your docker-compose.yml for credentials)'
-    )
-  );
-  console.log(chalk.white('4. Configure your data sources and dashboards\n'));
+  console.log(chalk.white('3. Log in to Grafana'));
+  console.log(chalk.white('   username:'), chalk.green('admin'));
+  console.log(chalk.white('   password:'), chalk.green('admin'));
 };
 
 const deploy = async () => {
@@ -178,13 +179,6 @@ const deploy = async () => {
     console.log(
       chalk.blue.bold('\n🚀 Observability Stack - Secure HTTPS Deployment\n')
     );
-
-    const hasCredentials = process.env.INITIALIZED === 'true';
-
-    if (!hasCredentials) {
-      console.log(chalk.yellow('AWS credentials not found. Starting init...'));
-      await init();
-    }
 
     const { confirmDeploy } = await inquirer.prompt([
       {
@@ -199,6 +193,11 @@ const deploy = async () => {
     if (!confirmDeploy) {
       console.log(chalk.yellow('Deployment cancelled'));
       return;
+    }
+
+    if (!hasCredentials()) {
+      console.log(chalk.yellow('AWS credentials not found. Starting init...'));
+      await init();
     }
 
     console.log(

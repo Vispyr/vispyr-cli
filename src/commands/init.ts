@@ -1,6 +1,6 @@
 import { input, select } from '@inquirer/prompts';
 import ora from 'ora';
-import { saveConfig } from '../utils/config.js';
+import { exportEnvironment } from '../utils/config.js';
 
 const awsRegions = [
   'us-east-1',
@@ -58,7 +58,7 @@ export const init = async () => {
     spinner: 'bouncingBall',
   }).start();
 
-  saveConfig(config);
+  exportEnvironment(config);
 
   await new Promise((res) => setTimeout(res, 3000));
   if (true) {
