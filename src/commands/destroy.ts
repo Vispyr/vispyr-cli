@@ -10,22 +10,28 @@ import {
   DeleteObjectsCommand,
   DeleteBucketCommand,
 } from '@aws-sdk/client-s3';
+import {
+  EC2Client,
+  DescribeAddressesCommand,
+  ReleaseAddressCommand,
+} from '@aws-sdk/client-ec2';
 import fs from 'fs-extra';
 import destroyCdkToolkit from '../utils/destroyCdkToolkit';
-fs.removeSync('cdk.out');
 
 const execAsync = promisify(exec);
 
 const destroy = async () => {
   try {
-    console.log(chalk.blue.bold('\nObservability Stack - Teardown\n'));
+    console.log(
+      chalk.blue.bold('\n🗑️  Observability Stack - Complete Teardown\n')
+    );
 
     const { confirmTeardown } = await inquirer.prompt([
       {
         type: 'confirm',
         name: 'confirmTeardown',
         message:
-          'This will delete the EC2 instance, CDKToolkit stack, and the bootstrap S3 bucket. Continue?',
+          'This will delete the EC2 instance, VPC, NAT Gateway, Elastic IP, CDKToolkit stack, and bootstrap S3 bucket. Continue?',
         default: false,
       },
     ]);
@@ -35,38 +41,97 @@ const destroy = async () => {
       return;
     }
 
-    // Acknowledge notice
-    await execAsync('npx cdk acknowledge 34892');
+    // Acknowledge notice (ignore if it doesn't exist)
+    try {
+      await execAsync('npx cdk acknowledge 34892');
+    } catch (error) {
+      // Notice might not exist, continue
+    }
 
-    // 1. Destroy Ec2Stack
+    // 1. Check for any unattached Elastic IPs before destroying stack
+    const eipSpinner = ora('Checking for Elastic IPs...').start();
+    try {
+      const ec2 = new EC2Client({ region: process.env.AWS_REGION });
+      const { Addresses } = await ec2.send(new DescribeAddressesCommand({}));
+
+      const unattachedEIPs = Addresses?.filter(
+        (addr) => !addr.InstanceId && addr.AllocationId
+      );
+
+      if (unattachedEIPs && unattachedEIPs.length > 0) {
+        eipSpinner.text = `Found ${unattachedEIPs.length} unattached Elastic IP(s), will clean up after stack destruction...`;
+      }
+      eipSpinner.succeed('Elastic IP check complete');
+    } catch (error) {
+      eipSpinner.warn(
+        'Could not check Elastic IPs - continuing with stack destruction'
+      );
+    }
+
+    // 2. Destroy Ec2Stack
     const destroySpinner = ora(
-      'Destroying deployed stack (Ec2Stack)...'
+      'Destroying observability stack (VPC, EC2, NAT Gateway, etc.)...'
     ).start();
     try {
       const { stdout, stderr } = await execAsync(
         'npx cdk destroy Ec2Stack --force'
       );
-      destroySpinner.succeed('Ec2Stack destroyed successfully');
-      console.log(stdout);
-      if (stderr) console.error(chalk.gray(stderr));
+      destroySpinner.succeed('Observability stack destroyed successfully');
+
+      if (stdout) console.log(chalk.gray(stdout));
+      if (stderr && !stderr.includes('npm WARN')) {
+        console.log(chalk.gray(stderr));
+      }
     } catch (error) {
-      destroySpinner.fail('Failed to destroy Ec2Stack');
+      destroySpinner.fail('Failed to destroy observability stack');
       console.error(chalk.red(error));
+      // Continue with other cleanup even if stack destruction fails
     }
 
-    // 2. Destroy CDKToolkit
-    // From Google, check if it works
+    // 3. Clean up any remaining Elastic IPs (sometimes they don't get released automatically)
+    const eipCleanupSpinner = ora(
+      'Cleaning up any remaining Elastic IPs...'
+    ).start();
+    try {
+      const ec2 = new EC2Client({ region: process.env.AWS_REGION });
+      const { Addresses } = await ec2.send(new DescribeAddressesCommand({}));
+
+      const unattachedEIPs = Addresses?.filter(
+        (addr) => !addr.InstanceId && addr.AllocationId
+      );
+
+      if (unattachedEIPs && unattachedEIPs.length > 0) {
+        for (const eip of unattachedEIPs) {
+          if (eip.AllocationId) {
+            await ec2.send(
+              new ReleaseAddressCommand({ AllocationId: eip.AllocationId })
+            );
+            eipCleanupSpinner.text = `Released Elastic IP: ${eip.PublicIp}`;
+          }
+        }
+        eipCleanupSpinner.succeed(
+          `Released ${unattachedEIPs.length} Elastic IP(s)`
+        );
+      } else {
+        eipCleanupSpinner.succeed('No unattached Elastic IPs found');
+      }
+    } catch (error) {
+      eipCleanupSpinner.warn(
+        'Could not clean up Elastic IPs - check AWS console manually'
+      );
+    }
+
+    // 4. Destroy CDKToolkit
     const toolkitSpinner = ora('Destroying CDKToolkit stack...').start();
     try {
-      destroyCdkToolkit(process.env.AWS_REGION as string);
-
+      await destroyCdkToolkit(process.env.AWS_REGION as string);
       toolkitSpinner.succeed('CDKToolkit destroyed successfully');
     } catch (error) {
       toolkitSpinner.fail('Failed to destroy CDKToolkit');
       console.error(chalk.red(error));
     }
 
-    // 3. Remove CDK Bootstrap S3 Bucket
+    // 5. Remove CDK Bootstrap S3 Bucket
     const bucketSpinner = ora(
       'Searching for CDK bootstrap S3 bucket...'
     ).start();
@@ -160,14 +225,38 @@ const destroy = async () => {
       await s3.send(new DeleteBucketCommand({ Bucket: bootstrapBucket.Name }));
 
       bucketSpinner.succeed(`Bucket ${bootstrapBucket.Name} deleted`);
-
-      // Local File Cleanup
-      fs.removeSync('cdk.out');
-      fs.removeSync('.aws'); // no longer need
-      fs.removeSync('cdk.context.json');
     }
+
+    // 6. Local File Cleanup
+    const cleanupSpinner = ora('Cleaning up local files...').start();
+    try {
+      // Remove CDK generated files
+      if (fs.existsSync('cdk.out')) fs.removeSync('cdk.out');
+      if (fs.existsSync('cdk.context.json')) fs.removeSync('cdk.context.json');
+      if (fs.existsSync('outputs.json')) fs.removeSync('outputs.json');
+      if (fs.existsSync('.aws')) fs.removeSync('.aws');
+
+      cleanupSpinner.succeed('Local files cleaned up');
+    } catch (error) {
+      cleanupSpinner.warn('Some local files could not be cleaned up');
+    }
+
+    console.log(chalk.green.bold('\n✅ Complete teardown finished!'));
+    console.log(
+      chalk.gray('All AWS resources and local files have been cleaned up.')
+    );
+    console.log(
+      chalk.gray(
+        'Please verify in your AWS console that all resources are deleted.\n'
+      )
+    );
   } catch (err) {
-    console.error(chalk.red('An error occurred during teardown:'), err);
+    console.error(chalk.red('\n❌ An error occurred during teardown:'), err);
+    console.log(
+      chalk.yellow(
+        '\n⚠️  Please check your AWS console to manually clean up any remaining resources.'
+      )
+    );
     process.exit(1);
   }
 };

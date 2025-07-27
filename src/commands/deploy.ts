@@ -5,9 +5,9 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
-// import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import init from './init.js';
+import { hasCredentials } from '../utils/config.js';
 
 const execAsync = promisify(exec);
 
@@ -16,6 +16,7 @@ const outputsPath = path.resolve(process.cwd(), 'outputs.json');
 interface DeploymentOutputs {
   instanceId?: string;
   publicIp?: string;
+  httpsEndpoint?: string;
 }
 
 const getStackOutputs = async (): Promise<DeploymentOutputs> => {
@@ -36,6 +37,7 @@ const getStackOutputs = async (): Promise<DeploymentOutputs> => {
       return {
         instanceId: stackOutputs.InstanceId,
         publicIp: stackOutputs.InstancePublicIP,
+        httpsEndpoint: stackOutputs.HTTPSEndpoint,
       };
     }
 
@@ -86,85 +88,104 @@ const waitForInstanceReady = async (
   throw new Error('Instance readiness timeout');
 };
 
-const waitForDeploymentComplete = async (
-  instanceId: string,
-  region: string
-): Promise<void> => {
-  const ec2Client = new EC2Client({ region });
+const waitForHTTPSReady = async (httpsEndpoint: string): Promise<void> => {
   const spinner = ora(
-    'Waiting for application deployment to complete...'
+    'Waiting for HTTPS endpoint and application deployment...'
   ).start();
 
   let attempts = 0;
-  const maxAttempts = 60; // 10 minutes with 10-second intervals
+  const maxAttempts = 90; // 15 minutes with 10-second intervals
 
   while (attempts < maxAttempts) {
     try {
-      const response = await ec2Client.send(
-        new DescribeInstancesCommand({
-          InstanceIds: [instanceId],
-        })
+      // Use curl to test HTTPS endpoint, accepting self-signed certificates
+      const { stdout } = await execAsync(
+        `curl -k -s -o /dev/null -w "%{http_code}" ${httpsEndpoint}/api/health || echo "000"`
       );
 
-      const instance = response.Reservations?.[0]?.Instances?.[0];
-      if (instance?.State?.Name === 'running' && instance?.PublicIpAddress) {
-        // Try to check if deployment is complete by looking at instance logs
-        // This is a simplified check - in practice, you might want to use CloudWatch logs
-        spinner.text = `Vispyr Backend build in progress... (${Math.floor(
-          (attempts * 10) / 60
-        )} min elapsed)`;
-
-        // After 5 minutes, assume deployment is likely complete
-        if (attempts >= 30) {
-          spinner.succeed('Application deployment should be complete');
-          return;
-        }
+      if (stdout.trim() === '200') {
+        spinner.succeed('HTTPS endpoint is ready and Grafana is responding');
+        return;
       }
+
+      const minutes = Math.floor((attempts * 10) / 60);
+      const seconds = (attempts * 10) % 60;
+      spinner.text = `Waiting for HTTPS endpoint... (${minutes}:${seconds
+        .toString()
+        .padStart(2, '0')} elapsed)`;
 
       await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
       attempts++;
     } catch (error) {
-      spinner.fail('Failed to monitor deployment status');
-      throw error;
+      // Continue trying even if curl fails
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      attempts++;
     }
   }
 
   spinner.warn(
-    'Deployment monitoring timeout - deployment may still be in progress'
+    'HTTPS endpoint monitoring timeout - deployment may still be in progress'
   );
 };
 
-const showServiceUrls = (publicIp: string): void => {
+const showServiceInfo = (httpsEndpoint: string, publicIp: string): void => {
   console.log(chalk.blue.bold('\n🎉 Deployment Complete!\n'));
   console.log(chalk.green('Your observability stack is now running at:'));
-  console.log(chalk.cyan(`• Grafana: http://${publicIp}:3000`));
-  console.log(chalk.cyan(`• Prometheus: http://${publicIp}:9090`));
-  console.log(chalk.cyan(`• Pyroscope: http://${publicIp}:4040`));
-  console.log(chalk.cyan(`• Tempo: http://${publicIp}:3200`));
+  console.log(chalk.cyan.bold(`• Grafana (HTTPS): ${httpsEndpoint}`));
+
+  console.log(chalk.yellow.bold('\n⚠️  Important Security Notice:'));
+  console.log(chalk.yellow('This deployment uses a self-signed certificate.'));
   console.log(
-    chalk.gray(
-      '\nNote: Make sure your security groups allow access to these ports\n'
+    chalk.yellow(
+      'Your browser will show security warnings that you need to accept.'
     )
   );
+  console.log(
+    chalk.yellow('This is normal and expected for self-signed certificates.\n')
+  );
+
+  console.log(chalk.gray('Internal services (not directly accessible):'));
+  console.log(
+    chalk.gray(
+      `• Prometheus: http://${publicIp}:9090 (via private network only)`
+    )
+  );
+  console.log(
+    chalk.gray(
+      `• Pyroscope: http://${publicIp}:4040 (via private network only)`
+    )
+  );
+  console.log(
+    chalk.gray(`• Tempo: http://${publicIp}:3200 (via private network only)`)
+  );
+
+  console.log(chalk.blue('\n📋 Next Steps:'));
+  console.log(
+    chalk.white('1. Open the Grafana UI:'),
+    chalk.green(httpsEndpoint)
+  );
+  console.log(
+    chalk.white(
+      '2. Accept the security warning for the self-signed certificate'
+    )
+  );
+  console.log(chalk.white('3. Log in to Grafana'));
+  console.log(chalk.white('   username:'), chalk.green('admin'));
+  console.log(chalk.white('   password:'), chalk.green('admin'));
 };
 
 const deploy = async () => {
   try {
-    console.log(chalk.blue.bold('\n🚀 Observability Stack - Deployment\n'));
-
-    const hasCredentials = process.env.INITIALIZED === 'true';
-
-    if (!hasCredentials) {
-      console.log(chalk.yellow('AWS credentials not found. Starting init...'));
-      await init();
-    }
+    console.log(
+      chalk.blue.bold('\n🚀 Observability Stack - Secure HTTPS Deployment\n')
+    );
 
     const { confirmDeploy } = await inquirer.prompt([
       {
         type: 'confirm',
         name: 'confirmDeploy',
         message:
-          'This will deploy an EC2 instance and set up your observability stack with Docker Compose. Continue?',
+          'This will deploy a secure observability stack with custom VPC, private subnet, and HTTPS access. Continue?',
         default: false,
       },
     ]);
@@ -174,12 +195,17 @@ const deploy = async () => {
       return;
     }
 
+    if (!hasCredentials()) {
+      console.log(chalk.yellow('AWS credentials not found. Starting init...'));
+      await init();
+    }
+
     console.log(
       chalk.green('✅ Using AWS credentials for:'),
       process.env.AWS_ACCESS_KEY_ID?.substring(0, 8) + '...'
     );
 
-    console.log(chalk.yellow('\n📋 Generating CDK templates (if needed)...'));
+    console.log(chalk.yellow('\n📋 Generating CDK templates...'));
     const synthSpinner = ora('Running CDK Synth...').start();
     try {
       await execAsync('npx cdk synth');
@@ -208,8 +234,10 @@ const deploy = async () => {
       // Notice might not exist, continue
     }
 
-    console.log(chalk.yellow('\n☁️  Deploying infrastructure...'));
-    const deploySpinner = ora('Deploying infrastructure using CDK...').start();
+    console.log(chalk.yellow('\n☁️  Deploying secure infrastructure...'));
+    const deploySpinner = ora(
+      'Deploying VPC, NAT Gateway, and EC2 instance...'
+    ).start();
     try {
       const { stderr } = await execAsync(
         'npx cdk deploy --require-approval never --outputs-file outputs.json'
@@ -228,7 +256,7 @@ const deploy = async () => {
     // Get deployment outputs
     const outputs = await getStackOutputs();
 
-    if (!outputs.instanceId || !outputs.publicIp) {
+    if (!outputs.instanceId || !outputs.publicIp || !outputs.httpsEndpoint) {
       console.log(
         chalk.yellow('\n⚠️  Could not automatically retrieve instance details.')
       );
@@ -251,27 +279,31 @@ const deploy = async () => {
 
       outputs.instanceId = instanceId;
       outputs.publicIp = publicIp;
+      outputs.httpsEndpoint = `https://ec2-${publicIp.replace(/\./g, '-')}.${
+        process.env.AWS_REGION
+      }.compute.amazonaws.com`;
     }
 
-    // Wait for instance to be ready and application to deploy
+    // Wait for instance to be ready
     if (outputs.instanceId) {
       await waitForInstanceReady(
         outputs.instanceId,
         process.env.AWS_REGION as string
       );
-      await waitForDeploymentComplete(
-        outputs.instanceId,
-        process.env.AWS_REGION as string
-      );
     }
 
-    // Show service URLs
-    if (outputs.publicIp) {
-      showServiceUrls(outputs.publicIp);
+    // Wait for HTTPS endpoint to be ready
+    if (outputs.httpsEndpoint) {
+      await waitForHTTPSReady(outputs.httpsEndpoint);
+    }
+
+    // Show service information
+    if (outputs.httpsEndpoint && outputs.publicIp) {
+      showServiceInfo(outputs.httpsEndpoint, outputs.publicIp);
     } else {
       console.log(chalk.green('\n✅ Infrastructure deployed successfully!'));
       console.log(
-        chalk.yellow('Check your AWS console for the instance IP address.')
+        chalk.yellow('Check your AWS console for the instance details.')
       );
     }
   } catch (err) {
