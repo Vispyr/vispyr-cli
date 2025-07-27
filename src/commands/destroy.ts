@@ -16,7 +16,7 @@ import {
   ReleaseAddressCommand,
 } from '@aws-sdk/client-ec2';
 import fs from 'fs-extra';
-import destroyCdkToolkit from '../utils/destroyCdkToolkit';
+import destroyCdkToolkit from '../utils/destroyCdkToolkit.js';
 
 const execAsync = promisify(exec);
 
