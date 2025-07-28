@@ -45,7 +45,24 @@ export class DemoStack extends Stack {
     securityGroup.addIngressRule(
       Peer.anyIpv4(),
       Port.tcp(3001),
-      'Node app port'
+      'Main Node app port'
+    );
+    securityGroup.addIngressRule(
+      Peer.anyIpv4(),
+      Port.tcp(3002),
+      'Internal Node app port'
+    );
+    securityGroup.addIngressRule(
+      Peer.anyIpv4(),
+      Port.tcp(3003),
+      'External Node app port'
+    );
+
+    // Allow Vite dev server or React client
+    securityGroup.addIngressRule(
+      Peer.anyIpv4(),
+      Port.tcp(5173),
+      'Client app (Vite)'
     );
 
     // Allow SSH access
@@ -88,18 +105,59 @@ export class DemoStack extends Stack {
       // Install and start app as ec2-user
       'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/server_main && npm install"',
 
-      // Create log file with proper permissions
-      'touch /var/log/app.log',
-      'chown ec2-user:ec2-user /var/log/app.log',
+      // Install dependency apps as ec2-user
+      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/server_internal && npm install"',
+      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/server_external && npm install"',
+      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/client && npm install npm install -D tailwindcss postcss autoprefixer && npx tailwindcss init -p"',
+
+      // Create log files with proper ownership
+      'touch /var/log/main.log /var/log/internal.log /var/log/external.log /var/log/client.log',
+      'chown ec2-user:ec2-user /var/log/main.log /var/log/internal.log /var/log/external.log /var/log/client.log',
 
       // Set environment variables and start app as ec2-user
-      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/server_main && DB_USER=testuser DB_HOST=localhost DB_NAME=telemetry_test DB_PASSWORD=testpass DB_PORT=5432 nohup npm run dev > /var/log/app.log 2>&1 &"',
+      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/server_main && DB_USER=testuser DB_HOST=localhost DB_NAME=telemetry_test DB_PASSWORD=testpass DB_PORT=5432 nohup npm run dev > /var/log/main.log 2>&1 &"',
 
       // Wait for app to be ready
-      'echo "Waiting for app to start..."',
+      'echo "Waiting for Main Server to start..."',
       'for i in {1..30}; do',
-      '  if curl -s http://localhost:3001/api/profile/efficient-sort > /dev/null; then',
-      '    echo "Server is ready"',
+      '  if curl -s http://localhost:3001/health > /dev/null; then',
+      '    echo "Main Server is ready"',
+      '    break',
+      '  fi',
+      '  echo "Waiting for app... ($i/30)"',
+      '  sleep 10',
+      'done',
+
+      // Internal Server
+      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/server_internal && nohup npm run dev > /var/log/internal.log 2>&1 &"',
+      'echo "Waiting for Internal Server to start..."',
+      'for i in {1..30}; do',
+      '  if curl -s http://localhost:3003/health > /dev/null; then',
+      '    echo "Internal Server is ready"',
+      '    break',
+      '  fi',
+      '  echo "Waiting for app... ($i/30)"',
+      '  sleep 10',
+      'done',
+
+      // External Server
+      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/server_external && nohup npm run dev > /var/log/external.log 2>&1 &"',
+      'echo "Waiting for External Server to start..."',
+      'for i in {1..30}; do',
+      '  if curl -s http://localhost:3002/health > /dev/null; then',
+      '    echo "External Server is ready"',
+      '    break',
+      '  fi',
+      '  echo "Waiting for app... ($i/30)"',
+      '  sleep 10',
+      'done',
+
+      // Client
+      'su - ec2-user -c "cd /home/ec2-user/vispyr-test-app/client && npm install && npm install -D tailwindcss postcss autoprefixer && npx tailwindcss init -p && nohup npm run dev > /var/log/client.log 2>&1 &"',
+      'echo "Waiting for Client to start..."',
+      'for i in {1..30}; do',
+      '  if curl -s http://localhost:5173/ > /dev/null; then',
+      '    echo "Client is ready"',
       '    break',
       '  fi',
       '  echo "Waiting for app... ($i/30)"',
