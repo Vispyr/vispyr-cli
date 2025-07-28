@@ -1,6 +1,7 @@
 import { App } from 'aws-cdk-lib';
 import { Ec2Stack } from '../stacks/ec2-stack.js';
 import process from 'process';
+import { DemoStack } from '../stacks/demo-stack.js';
 
 const main = async () => {
   const app = new App();
@@ -10,6 +11,10 @@ const main = async () => {
     const region = process.env.CDK_DEFAULT_REGION;
 
     new Ec2Stack(app, 'Ec2Stack', {
+      env: { account, region },
+    });
+
+    new DemoStack(app, 'DemoStack', {
       env: { account, region },
     });
 
