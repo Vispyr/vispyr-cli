@@ -7,8 +7,6 @@ import chalk from 'chalk';
 
 import deploy from './commands/deploy.js';
 import destroy from './commands/destroy.js';
-import deployDemo from './commands/demo-deploy.js';
-import destroyDemo from './commands/demo-destroy.js';
 
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
@@ -33,16 +31,6 @@ program
   .command('destroy')
   .description('Destroy AWS architecture')
   .action(destroy);
-
-program
-  .command('demo-deploy')
-  .description('Deploy demo app to AWS')
-  .action(deployDemo);
-
-program
-  .command('demo-destroy')
-  .description('Destroy Demo architecture')
-  .action(destroyDemo);
 
 program.parse();
 
