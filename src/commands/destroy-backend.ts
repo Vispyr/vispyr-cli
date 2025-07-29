@@ -20,7 +20,7 @@ import destroyCdkToolkit from '../utils/destroyCdkToolkit.js';
 
 const execAsync = promisify(exec);
 
-const destroy = async () => {
+const destroyBackend = async () => {
   try {
     console.log(
       chalk.blue.bold('\n🗑️  Observability Stack - Complete Teardown\n')
@@ -261,4 +261,4 @@ const destroy = async () => {
   }
 };
 
-export default destroy;
+export default destroyBackend;

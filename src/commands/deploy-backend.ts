@@ -275,7 +275,7 @@ const showServiceInfo = (
   }
 };
 
-const deploy = async () => {
+const deployBackend = async () => {
   try {
     console.log(
       chalk.blue.bold('\n🚀 Observability Stack - Secure HTTPS Deployment\n')
@@ -461,4 +461,4 @@ const deploy = async () => {
   }
 };
 
-export default deploy;
+export default deployBackend;

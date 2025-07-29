@@ -5,10 +5,10 @@ import { Command } from 'commander';
 import figlet from 'figlet';
 import chalk from 'chalk';
 
-import deploy from './commands/deploy.js';
-import destroy from './commands/destroy.js';
 import deployAgent from './commands/deploy-agent.js';
 import destroyAgent from './commands/destroy-agent.js';
+import destroyBackend from './commands/destroy-backend.js';
+import deployBackend from './commands/deploy-backend.js';
 
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
@@ -27,12 +27,12 @@ program
 program
   .command('deploy')
   .description('Deploys AWS architecture')
-  .action(deploy);
+  .action(deployBackend);
 
 program
   .command('destroy')
   .description('Destroy AWS architecture')
-  .action(destroy);
+  .action(destroyBackend);
 
 program
   .command('deploy-agent')
