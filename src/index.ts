@@ -7,6 +7,8 @@ import chalk from 'chalk';
 
 import deploy from './commands/deploy.js';
 import destroy from './commands/destroy.js';
+import deployAgent from './commands/deploy-agent.js';
+import destroyAgent from './commands/destroy-agent.js';
 
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
@@ -31,6 +33,16 @@ program
   .command('destroy')
   .description('Destroy AWS architecture')
   .action(destroy);
+
+program
+  .command('deploy-agent')
+  .description('Adds agent to EC2 instance')
+  .action(deployAgent);
+
+program
+  .command('destroy-agent')
+  .description('Removes agent from EC2 instance')
+  .action(destroyAgent);
 
 program.parse();
 
