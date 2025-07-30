@@ -30,6 +30,8 @@ cdk.context.json
 .aws
 cdk.out
 outputs.json
+backend-outputs.json
+demo-outputs.json
 
 # Delete later
 .important_data

@@ -10,17 +10,34 @@ import {
   UserData,
   SubnetType,
   CfnEIP,
+  CfnVPCPeeringConnection,
+  CfnRoute,
+  IVpc,
 } from 'aws-cdk-lib/aws-ec2';
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
-export class Ec2Stack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+interface VispyrBackendProps extends StackProps {
+  peerVpcId: string;
+}
+
+export class VispyrBackend extends Stack {
+  constructor(scope: Construct, id: string, props: VispyrBackendProps) {
     super(scope, id, props);
 
+    const { peerVpcId } = props;
+
+    // Validate peerVpcId format
+    if (!peerVpcId.match(/^vpc-[a-z0-9]{8,17}$/)) {
+      throw new Error(
+        `Invalid PEER_VPC_ID format: ${peerVpcId}. Expected format: vpc-xxxxxxxxx`
+      );
+    }
+
     // Create custom VPC
-    const vpc = new Vpc(this, 'ObservabilityVPC', {
+    const vpc = new Vpc(this, 'VispyrVPC', {
       maxAzs: 2,
+      cidr: '10.1.0.0/16',
       subnetConfiguration: [
         {
           cidrMask: 24,
@@ -36,11 +53,39 @@ export class Ec2Stack extends Stack {
       natGateways: 1, // One NAT Gateway for cost optimization
     });
 
-    // Security group for EC2 instance (HTTPS only + SSH)
-    const securityGroup = new SecurityGroup(this, 'ObservabilitySG', {
+    // Import the peer VPC
+    const peerVpc = Vpc.fromLookup(this, 'PeerVpc', {
+      vpcId: peerVpcId,
+    });
+
+    // Create VPC Peering Connection
+    const peeringConnection = new CfnVPCPeeringConnection(
+      this,
+      'VpcPeeringConnection',
+      {
+        vpcId: vpc.vpcId,
+        peerVpcId,
+        tags: [
+          {
+            key: 'Name',
+            value: 'VispyrPeeringConnection',
+          },
+          {
+            key: 'Purpose',
+            value: 'ObservabilityStack',
+          },
+        ],
+      }
+    );
+
+    // Add routes from new VPC to peer VPC
+    this.addRoutesToPeerVpc(vpc, peerVpc, peeringConnection);
+
+    // Security group for Vispyr EC2 instance
+    const securityGroup = new SecurityGroup(this, 'VispyrSG', {
       vpc,
       allowAllOutbound: true,
-      description: 'Allow HTTPS and SSH access only',
+      description: 'Security Group for Vispyr Stack',
     });
 
     // Allow HTTPS traffic from anywhere
@@ -53,8 +98,23 @@ export class Ec2Stack extends Stack {
     // Allow SSH for management (optional - can be removed for production)
     securityGroup.addIngressRule(Peer.anyIpv4(), Port.tcp(22), 'SSH access');
 
+    // Allow access from peer VPC for Observability services
+    const observabilityPorts = [
+      { port: 4317, description: 'OTLP' },
+      { port: 9999, description: 'Pyroscope' },
+      { port: 9090, description: 'Node Exporter' },
+    ];
+
+    observabilityPorts.forEach(({ port, description }) => {
+      securityGroup.addIngressRule(
+        Peer.ipv4(peerVpc.vpcCidrBlock),
+        Port.tcp(port),
+        `Allow ${description} access from peer VPC`
+      );
+    });
+
     // IAM role for EC2 instance
-    const role = new Role(this, 'ObservabilityInstanceRole', {
+    const role = new Role(this, 'VispyrInstanceRole', {
       assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
       managedPolicies: [
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
@@ -172,7 +232,7 @@ export class Ec2Stack extends Stack {
     );
 
     // Create EC2 instance in public subnet (needed for HTTPS access)
-    const instance = new Instance(this, 'ObservabilityInstance', {
+    const instance = new Instance(this, 'VispyrBackend', {
       vpc,
       instanceType: new InstanceType('t3.small'), // Upgraded from micro for better performance
       machineImage: MachineImage.latestAmazonLinux2023(),
@@ -185,7 +245,7 @@ export class Ec2Stack extends Stack {
     });
 
     // Associate Elastic IP with instance
-    new CfnEIP(this, 'ObservabilityEIPAssociation', {
+    new CfnEIP(this, 'VispyrEIPAssociation', {
       domain: 'vpc',
       instanceId: instance.instanceId,
     });
@@ -193,26 +253,87 @@ export class Ec2Stack extends Stack {
     // Outputs
     new CfnOutput(this, 'InstanceId', {
       value: instance.instanceId,
-      exportName: 'ObservabilityInstanceId',
-      description: 'Instance ID of the observability EC2 instance',
+      exportName: 'VispyrInstanceId',
+      description: 'Instance ID of the Vispyr EC2 instance',
     });
 
     new CfnOutput(this, 'InstancePublicIP', {
       value: instance.instancePublicIp,
-      exportName: 'ObservabilityInstancePublicIP',
-      description: 'Public IP of the observability EC2 instance',
+      exportName: 'VispyrInstancePublicIP',
+      description: 'Public IP of the Vispyr EC2 instance',
     });
 
     new CfnOutput(this, 'HTTPSEndpoint', {
       value: `https://${instance.instancePublicDnsName}`,
-      exportName: 'ObservabilityHTTPSEndpoint',
+      exportName: 'VispyrHTTPSEndpoint',
       description: 'HTTPS endpoint for Grafana access',
     });
 
     new CfnOutput(this, 'VPCId', {
       value: vpc.vpcId,
-      exportName: 'ObservabilityVPCId',
+      exportName: 'VispyrVPCId',
       description: 'VPC ID for the observability stack',
+    });
+
+    new CfnOutput(this, 'VpcCidr', {
+      value: vpc.vpcCidrBlock,
+      description: 'CIDR block of the created VPC',
+    });
+
+    new CfnOutput(this, 'InstancePrivateIp', {
+      value: instance.instancePrivateIp,
+      description: 'Private IP of the EC2 instance',
+    });
+
+    // VPC Peering outputs
+    new CfnOutput(this, 'PeeringConnectionId', {
+      value: peeringConnection.attrId,
+      description: 'VPC Peering Connection ID',
+    });
+
+    new CfnOutput(this, 'PeerVpcId', {
+      value: peerVpcId,
+      description: 'Peer VPC ID',
+    });
+
+    new CfnOutput(this, 'PeerVpcCidr', {
+      value: peerVpc.vpcCidrBlock,
+      description: 'Peer VPC CIDR block',
+    });
+
+    // Manual route setup instructions
+    new CfnOutput(this, 'PeerVpcRouteInstructions', {
+      value: `To complete peering: Add route in peer VPC route tables - Destination: ${vpc.vpcCidrBlock}, Target: ${peeringConnection.attrId}`,
+      description: 'Manual route setup required in peer VPC',
+    });
+  }
+
+  private addRoutesToPeerVpc(
+    vpc: Vpc,
+    peerVpc: IVpc,
+    peeringConnection: CfnVPCPeeringConnection
+  ) {
+    // Add routes from new VPC to peer VPC
+    vpc.publicSubnets.forEach((subnet, index) => {
+      const route = new CfnRoute(this, `PublicRoute${index}ToPeer`, {
+        routeTableId: subnet.routeTable.routeTableId,
+        destinationCidrBlock: peerVpc.vpcCidrBlock,
+        vpcPeeringConnectionId: peeringConnection.attrId,
+      });
+
+      // Ensure the route depends on the peering connection
+      route.addDependency(peeringConnection);
+    });
+
+    vpc.privateSubnets.forEach((subnet, index) => {
+      const route = new CfnRoute(this, `PrivateRoute${index}ToPeer`, {
+        routeTableId: subnet.routeTable.routeTableId,
+        destinationCidrBlock: peerVpc.vpcCidrBlock,
+        vpcPeeringConnectionId: peeringConnection.attrId,
+      });
+
+      // Ensure the route depends on the peering connection
+      route.addDependency(peeringConnection);
     });
   }
 }

@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { exec } from 'child_process';
 import inquirer from 'inquirer';
 import ora from 'ora';
+import path from 'path';
 import { promisify } from 'util';
 import {
   S3Client,
@@ -14,13 +15,100 @@ import {
   EC2Client,
   DescribeAddressesCommand,
   ReleaseAddressCommand,
+  DescribeRouteTablesCommand,
+  DeleteRouteCommand,
 } from '@aws-sdk/client-ec2';
 import fs from 'fs-extra';
 import destroyCdkToolkit from '../utils/destroyCdkToolkit.js';
 
 const execAsync = promisify(exec);
 
-const destroy = async () => {
+const cleanupVpcPeeringRoutes = async (
+  peerVpcId: string,
+  peeringConnectionId: string,
+  region: string
+): Promise<void> => {
+  const routeSpinner = ora('Cleaning up VPC peering routes...').start();
+
+  try {
+    const ec2 = new EC2Client({ region });
+
+    // Get all route tables in the peer VPC
+    const { RouteTables } = await ec2.send(
+      new DescribeRouteTablesCommand({
+        Filters: [
+          {
+            Name: 'vpc-id',
+            Values: [peerVpcId],
+          },
+        ],
+      })
+    );
+
+    if (!RouteTables || RouteTables.length === 0) {
+      routeSpinner.warn('No route tables found in peer VPC');
+      return;
+    }
+
+    let routesRemoved = 0;
+    let routeTablesProcessed = 0;
+
+    // Process each route table
+    for (const routeTable of RouteTables) {
+      if (!routeTable.RouteTableId || !routeTable.Routes) {
+        continue;
+      }
+
+      routeTablesProcessed++;
+
+      // Find routes that use the peering connection
+      const peeringRoutes = routeTable.Routes.filter(
+        (route) => route.VpcPeeringConnectionId === peeringConnectionId
+      );
+
+      // Remove each peering route
+      for (const route of peeringRoutes) {
+        if (!route.DestinationCidrBlock) {
+          continue;
+        }
+
+        try {
+          await ec2.send(
+            new DeleteRouteCommand({
+              RouteTableId: routeTable.RouteTableId,
+              DestinationCidrBlock: route.DestinationCidrBlock,
+            })
+          );
+
+          routesRemoved++;
+          routeSpinner.text = `Removed route ${route.DestinationCidrBlock} from route table ${routeTable.RouteTableId}`;
+        } catch (routeError) {
+          // Log but continue with other routes
+          console.log(
+            chalk.yellow(
+              `Warning: Could not remove route ${route.DestinationCidrBlock} from ${routeTable.RouteTableId}: ${routeError}`
+            )
+          );
+        }
+      }
+    }
+
+    if (routesRemoved > 0) {
+      routeSpinner.succeed(
+        `Removed ${routesRemoved} peering routes from ${routeTablesProcessed} route tables`
+      );
+    } else {
+      routeSpinner.succeed('No peering routes found to remove');
+    }
+  } catch (error) {
+    routeSpinner.warn(
+      'Could not clean up VPC peering routes - continuing with teardown'
+    );
+    console.log(chalk.yellow(`VPC peering route cleanup warning: ${error}`));
+  }
+};
+
+const destroyBackend = async () => {
   try {
     console.log(
       chalk.blue.bold('\n🗑️  Observability Stack - Complete Teardown\n')
@@ -68,7 +156,43 @@ const destroy = async () => {
       );
     }
 
-    // 2. Destroy Ec2Stack
+    // 2. Clean up VPC peering routes from peer VPC
+    try {
+      // Read outputs to get peering connection details
+      const outputsPath = path.resolve(process.cwd(), 'outputs.json');
+
+      if (fs.existsSync(outputsPath)) {
+        const outputs = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
+        const stackName = Object.keys(outputs)[0];
+        const stackOutputs = outputs[stackName];
+
+        if (stackOutputs.PeerVpcId && stackOutputs.PeeringConnectionId) {
+          await cleanupVpcPeeringRoutes(
+            stackOutputs.PeerVpcId,
+            stackOutputs.PeeringConnectionId,
+            process.env.AWS_REGION as string
+          );
+        } else {
+          console.log(
+            chalk.gray('No VPC peering connection details found in outputs')
+          );
+        }
+      } else {
+        console.log(
+          chalk.gray(
+            'No outputs.json found - skipping VPC peering route cleanup'
+          )
+        );
+      }
+    } catch (error) {
+      console.log(
+        chalk.yellow(
+          'Could not read outputs for VPC peering cleanup - continuing with teardown'
+        )
+      );
+    }
+
+    // 3. Destroy Ec2Stack
     const destroySpinner = ora(
       'Destroying observability stack (VPC, EC2, NAT Gateway, etc.)...'
     ).start();
@@ -88,7 +212,7 @@ const destroy = async () => {
       // Continue with other cleanup even if stack destruction fails
     }
 
-    // 3. Clean up any remaining Elastic IPs (sometimes they don't get released automatically)
+    // 4. Clean up any remaining Elastic IPs (sometimes they don't get released automatically)
     const eipCleanupSpinner = ora(
       'Cleaning up any remaining Elastic IPs...'
     ).start();
@@ -121,7 +245,7 @@ const destroy = async () => {
       );
     }
 
-    // 4. Destroy CDKToolkit
+    // 5. Destroy CDKToolkit
     const toolkitSpinner = ora('Destroying CDKToolkit stack...').start();
     try {
       await destroyCdkToolkit(process.env.AWS_REGION as string);
@@ -131,7 +255,7 @@ const destroy = async () => {
       console.error(chalk.red(error));
     }
 
-    // 5. Remove CDK Bootstrap S3 Bucket
+    // 6. Remove CDK Bootstrap S3 Bucket
     const bucketSpinner = ora(
       'Searching for CDK bootstrap S3 bucket...'
     ).start();
@@ -227,7 +351,7 @@ const destroy = async () => {
       bucketSpinner.succeed(`Bucket ${bootstrapBucket.Name} deleted`);
     }
 
-    // 6. Local File Cleanup
+    // 7. Local File Cleanup
     const cleanupSpinner = ora('Cleaning up local files...').start();
     try {
       // Remove CDK generated files
@@ -261,4 +385,4 @@ const destroy = async () => {
   }
 };
 
-export default destroy;
+export default destroyBackend;

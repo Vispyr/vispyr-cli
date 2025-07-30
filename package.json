@@ -16,6 +16,7 @@
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.848.0",
     "@aws-sdk/client-ec2": "^3.852.0",
+    "@aws-sdk/client-ec2-instance-connect": "^3.856.0",
     "@aws-sdk/client-s3": "^3.850.0",
     "@aws-sdk/client-sts": "^3.848.0",
     "@aws-sdk/credential-provider-node": "^3.848.0",

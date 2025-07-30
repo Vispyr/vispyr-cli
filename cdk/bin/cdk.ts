@@ -1,5 +1,5 @@
 import { App } from 'aws-cdk-lib';
-import { Ec2Stack } from '../stacks/ec2-stack.js';
+import { VispyrBackend } from '../stacks/ec2-stack.js';
 import process from 'process';
 
 const main = async () => {
@@ -8,9 +8,27 @@ const main = async () => {
   try {
     const account = process.env.CDK_DEFAULT_ACCOUNT;
     const region = process.env.CDK_DEFAULT_REGION;
+    const peerVpcId = process.env.PEER_VPC_ID;
 
-    new Ec2Stack(app, 'Ec2Stack', {
+    // Validate that peerVpcId is provided (mandatory)
+    if (!peerVpcId) {
+      console.error('❌ PEER_VPC_ID is required but not found in .env file');
+      console.error('Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file');
+      process.exit(1);
+    }
+
+    // Validate peer VPC ID format
+    if (!peerVpcId.match(/^vpc-[a-z0-9]{8,17}$/)) {
+      console.error(`❌ Invalid PEER_VPC_ID format: ${peerVpcId}`);
+      console.error('Expected format: vpc-xxxxxxxxx');
+      process.exit(1);
+    }
+
+    console.log(`🔗 Using peer VPC: ${peerVpcId}`);
+
+    new VispyrBackend(app, 'Ec2Stack', {
       env: { account, region },
+      peerVpcId,
     });
 
     app.synth();

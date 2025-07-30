@@ -5,9 +5,10 @@ import { Command } from 'commander';
 import figlet from 'figlet';
 import chalk from 'chalk';
 
-import deploy from './commands/deploy.js';
-import destroy from './commands/destroy.js';
-import init from './commands/init.js';
+import deployAgent from './commands/deploy-agent.js';
+import destroyAgent from './commands/destroy-agent.js';
+import destroyBackend from './commands/destroy-backend.js';
+import deployBackend from './commands/deploy-backend.js';
 
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
@@ -23,17 +24,25 @@ program
   .option('-m, --mkdir <value>', 'Create a directory')
   .option('-t, --touch <value>', 'Create a file');
 
-program.command('init').description('Configures AWS Credentials').action(init);
-
 program
-  .command('deploy')
+  .command('deploy-backend')
   .description('Deploys AWS architecture')
-  .action(deploy);
+  .action(deployBackend);
 
 program
-  .command('destroy')
+  .command('destroy-backend')
   .description('Destroy AWS architecture')
-  .action(destroy);
+  .action(destroyBackend);
+
+program
+  .command('deploy-agent')
+  .description('Adds agent to EC2 instance')
+  .action(deployAgent);
+
+program
+  .command('destroy-agent')
+  .description('Removes agent from EC2 instance')
+  .action(destroyAgent);
 
 program.parse();
 
