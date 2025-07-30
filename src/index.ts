@@ -25,12 +25,12 @@ program
   .option('-t, --touch <value>', 'Create a file');
 
 program
-  .command('deploy')
+  .command('deploy-backend')
   .description('Deploys AWS architecture')
   .action(deployBackend);
 
 program
-  .command('destroy')
+  .command('destroy-backend')
   .description('Destroy AWS architecture')
   .action(destroyBackend);
 

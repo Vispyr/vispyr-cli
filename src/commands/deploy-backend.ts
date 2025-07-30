@@ -9,6 +9,10 @@ import {
   EC2Client,
   DescribeInstancesCommand,
   DescribeVpcsCommand,
+  DescribeSubnetsCommand,
+  DescribeRouteTablesCommand,
+  CreateRouteCommand,
+  DeleteRouteCommand,
   AcceptVpcPeeringConnectionCommand,
 } from '@aws-sdk/client-ec2';
 import init from './init.js';
@@ -26,6 +30,21 @@ interface DeploymentOutputs {
   peeringConnectionId?: string;
   peerVpcId?: string;
 }
+
+interface SubnetInfo {
+  subnetId: string;
+  name: string;
+  cidr: string;
+  routeTableId: string;
+}
+
+interface AddedRoute {
+  routeTableId: string;
+  destinationCidr: string;
+  peeringConnectionId: string;
+}
+
+let addedRoutes: AddedRoute[] = [];
 
 const getStackOutputs = async (): Promise<DeploymentOutputs> => {
   try {
@@ -61,10 +80,86 @@ const getStackOutputs = async (): Promise<DeploymentOutputs> => {
   }
 };
 
+const generateNonOverlappingCidr = (peerVpcCidr: string): string => {
+  // Extract the first two octets from peer VPC CIDR (e.g., "10.0" from "10.0.0.0/16")
+  const peerOctets = peerVpcCidr.split('.').slice(0, 2);
+
+  // Generate a different second octet
+  const secondOctet = parseInt(peerOctets[1]);
+  const newSecondOctet = secondOctet === 0 ? 1 : secondOctet === 1 ? 2 : 0;
+
+  return `${peerOctets[0]}.${newSecondOctet}.0.0/16`;
+};
+
+const getSubnetsWithRouteTables = async (
+  vpcId: string,
+  region: string
+): Promise<SubnetInfo[]> => {
+  const ec2Client = new EC2Client({ region });
+
+  try {
+    // Get all subnets in the VPC
+    const subnetsResponse = await ec2Client.send(
+      new DescribeSubnetsCommand({
+        Filters: [{ Name: 'vpc-id', Values: [vpcId] }],
+      })
+    );
+
+    // Get all route tables in the VPC
+    const routeTablesResponse = await ec2Client.send(
+      new DescribeRouteTablesCommand({
+        Filters: [{ Name: 'vpc-id', Values: [vpcId] }],
+      })
+    );
+
+    const subnets = subnetsResponse.Subnets || [];
+    const routeTables = routeTablesResponse.RouteTables || [];
+
+    // Find the main route table
+    const mainRouteTable = routeTables.find((rt) =>
+      rt.Associations?.some((assoc) => assoc.Main)
+    );
+
+    const subnetInfos: SubnetInfo[] = subnets.map((subnet) => {
+      const subnetId = subnet.SubnetId!;
+      const cidr = subnet.CidrBlock!;
+
+      // Get subnet name from tags
+      const nameTag = subnet.Tags?.find((tag) => tag.Key === 'Name');
+      const name = nameTag?.Value || 'Unnamed Subnet';
+
+      // Find associated route table
+      let routeTableId = mainRouteTable?.RouteTableId!;
+
+      for (const rt of routeTables) {
+        const association = rt.Associations?.find(
+          (assoc) => assoc.SubnetId === subnetId
+        );
+        if (association) {
+          routeTableId = rt.RouteTableId!;
+          break;
+        }
+      }
+
+      return {
+        subnetId,
+        name,
+        cidr,
+        routeTableId,
+      };
+    });
+
+    return subnetInfos.sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error(chalk.red('Failed to retrieve subnet information:'), error);
+    throw error;
+  }
+};
+
 const validatePeerVpc = async (
   peerVpcId: string,
   region: string
-): Promise<boolean> => {
+): Promise<{ isValid: boolean; cidrBlock?: string }> => {
   try {
     const ec2Client = new EC2Client({ region });
     const response = await ec2Client.send(
@@ -75,17 +170,82 @@ const validatePeerVpc = async (
 
     const vpc = response.Vpcs?.[0];
     if (!vpc) {
-      return false;
+      return { isValid: false };
     }
 
     console.log(
       chalk.green(`✅ Found peer VPC: ${peerVpcId} (${vpc.CidrBlock})`)
     );
-    return true;
+    return { isValid: true, cidrBlock: vpc.CidrBlock };
   } catch (error) {
     console.error(chalk.red(`❌ Could not find VPC ${peerVpcId}:`, error));
-    return false;
+    return { isValid: false };
   }
+};
+
+const addRouteToSubnet = async (
+  routeTableId: string,
+  destinationCidr: string,
+  peeringConnectionId: string,
+  region: string
+): Promise<void> => {
+  try {
+    const ec2Client = new EC2Client({ region });
+    const spinner = ora(
+      `Adding route to route table ${routeTableId}...`
+    ).start();
+
+    await ec2Client.send(
+      new CreateRouteCommand({
+        RouteTableId: routeTableId,
+        DestinationCidrBlock: destinationCidr,
+        VpcPeeringConnectionId: peeringConnectionId,
+      })
+    );
+
+    // Track the added route for potential cleanup
+    addedRoutes.push({
+      routeTableId,
+      destinationCidr,
+      peeringConnectionId,
+    });
+
+    spinner.succeed(`Route added: ${destinationCidr} → ${peeringConnectionId}`);
+  } catch (error) {
+    console.error(chalk.red('Failed to add route:'), error);
+    throw error;
+  }
+};
+
+const cleanupAddedRoutes = async (region: string): Promise<void> => {
+  if (addedRoutes.length === 0) return;
+
+  console.log(chalk.yellow('\n🧹 Cleaning up added routes...'));
+  const ec2Client = new EC2Client({ region });
+
+  for (const route of addedRoutes) {
+    try {
+      const spinner = ora(
+        `Removing route from ${route.routeTableId}...`
+      ).start();
+
+      await ec2Client.send(
+        new DeleteRouteCommand({
+          RouteTableId: route.routeTableId,
+          DestinationCidrBlock: route.destinationCidr,
+        })
+      );
+
+      spinner.succeed(`Route removed from ${route.routeTableId}`);
+    } catch (error) {
+      console.warn(
+        chalk.yellow(`Failed to cleanup route in ${route.routeTableId}:`),
+        error
+      );
+    }
+  }
+
+  addedRoutes = [];
 };
 
 const acceptPeeringConnection = async (
@@ -220,6 +380,9 @@ const showServiceInfo = (
       chalk.green(`• Peering Connection ID: ${peeringInfo.peeringConnectionId}`)
     );
     console.log(
+      chalk.green('• Return routes have been automatically configured')
+    );
+    console.log(
       chalk.yellow(
         '• Services are accessible from the peer VPC via private IPs'
       )
@@ -254,23 +417,13 @@ const showServiceInfo = (
   if (peeringInfo) {
     console.log(chalk.blue('\n🔧 VPC Peering Setup:'));
     console.log(
-      chalk.white('4. The VPC peering connection has been created and accepted')
-    );
-    console.log(chalk.white('5. Routes have been configured in the new VPC'));
-    console.log(
-      chalk.yellow(
-        '6. ⚠️  MANUAL STEP REQUIRED: Add return routes in the peer VPC'
-      )
+      chalk.green('4. ✅ VPC peering connection has been created and accepted')
     );
     console.log(
-      chalk.cyan(
-        `   Add route: Destination: 10.1.0.0/16, Target: ${peeringInfo.peeringConnectionId}`
-      )
+      chalk.green('5. ✅ Return routes have been automatically configured')
     );
     console.log(
-      chalk.gray(
-        '   (This needs to be done in each route table in the peer VPC)'
-      )
+      chalk.green('6. ✅ Services are ready for cross-VPC communication')
     );
   }
 };
@@ -302,23 +455,60 @@ const deployBackend = async () => {
 
     console.log(chalk.blue(`🔗 VPC Peering configured: ${peerVpcId}`));
 
-    // Validate peer VPC exists
+    // Validate peer VPC exists and get its CIDR
     const region =
       process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
-    const isValidPeerVpc = await validatePeerVpc(peerVpcId, region);
+    const peerVpcValidation = await validatePeerVpc(peerVpcId, region);
 
-    if (!isValidPeerVpc) {
+    if (!peerVpcValidation.isValid || !peerVpcValidation.cidrBlock) {
       console.log(
         chalk.red(`❌ Invalid or inaccessible peer VPC: ${peerVpcId}`)
       );
       process.exit(1);
     }
 
+    // Generate non-overlapping CIDR for the new VPC
+    const newVpcCidr = generateNonOverlappingCidr(peerVpcValidation.cidrBlock);
+    console.log(chalk.blue(`📍 New VPC will use CIDR: ${newVpcCidr}`));
+
+    // Get subnets in peer VPC for route table selection
+    console.log(chalk.blue('\n🔍 Retrieving peer VPC subnet information...'));
+    const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
+
+    if (subnets.length === 0) {
+      console.log(chalk.red('❌ No subnets found in peer VPC'));
+      process.exit(1);
+    }
+
+    // Let user select which subnet's route table to modify
+    const subnetChoices = subnets.map((subnet) => ({
+      name: `${subnet.name} (${subnet.subnetId} - ${subnet.cidr})`,
+      value: subnet,
+    }));
+
+    const { selectedSubnet } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'selectedSubnet',
+        message: chalk.cyan(
+          'Select the subnet whose route table should receive the return route:'
+        ),
+        choices: subnetChoices,
+        pageSize: 15,
+      },
+    ]);
+
+    console.log(
+      chalk.green(
+        `✅ Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
+      )
+    );
+
     const { confirmDeploy } = await inquirer.prompt([
       {
         type: 'confirm',
         name: 'confirmDeploy',
-        message: `This will deploy a secure observability stack with VPC peering to ${peerVpcId}. Continue?`,
+        message: `This will deploy a secure observability stack with VPC peering to ${peerVpcId} and automatically configure return routes. Continue?`,
         default: false,
       },
     ]);
@@ -419,9 +609,21 @@ const deployBackend = async () => {
 
     // Accept VPC peering connection if it exists
     if (outputs.peeringConnectionId) {
-      const region =
-        process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
       await acceptPeeringConnection(outputs.peeringConnectionId, region);
+
+      // Add return route to the selected subnet's route table
+      try {
+        await addRouteToSubnet(
+          selectedSubnet.routeTableId,
+          newVpcCidr,
+          outputs.peeringConnectionId,
+          region
+        );
+      } catch (error) {
+        console.error(chalk.red('Failed to add return route, cleaning up...'));
+        await cleanupAddedRoutes(region);
+        throw error;
+      }
     }
 
     // Wait for instance to be ready
@@ -457,6 +659,12 @@ const deployBackend = async () => {
     }
   } catch (err) {
     console.error(chalk.red('\n❌ An error occurred:'), err);
+
+    // Cleanup any routes we added before failing
+    const region =
+      process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
+    await cleanupAddedRoutes(region);
+
     process.exit(1);
   }
 };

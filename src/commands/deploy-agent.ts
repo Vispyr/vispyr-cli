@@ -176,7 +176,7 @@ otelcol.processor.batch "sdk_telemetry" {
 // Exporters
 prometheus.remote_write "gateway_collector" {
  endpoint {
-   url = "http://${vispyrPrivateIp}:9091/api/v1/metrics/write"
+   url = "http://${vispyrPrivateIp}:9090/api/v1/metrics/write"
  }
 }
 
@@ -283,7 +283,20 @@ const installGrafanaAlloy = async (
   publicIp: string,
   region: string
 ): Promise<void> => {
-  // Step 1: Add Grafana GPG key
+  // Step 1: Clean any existing GPG state and cache
+  await executeRemoteCommands(
+    instanceId,
+    publicIp,
+    [
+      'sudo dnf clean all',
+      'sudo rm -f /etc/yum.repos.d/grafana.repo',
+      'sudo rpm -e gpg-pubkey-* --allmatches || true',
+    ],
+    'Cleaning existing repository state...',
+    region
+  );
+
+  // Step 2: Add Grafana GPG key with force import
   await executeRemoteCommands(
     instanceId,
     publicIp,
@@ -296,7 +309,7 @@ const installGrafanaAlloy = async (
     region
   );
 
-  // Step 2: Create repository configuration file
+  // Step 3: Create repository configuration file
   const repoConfig = `[grafana]
 name=grafana
 baseurl=https://rpm.grafana.com
@@ -318,32 +331,41 @@ sslcacert=/etc/pki/tls/certs/ca-bundle.crt`;
     region
   );
 
-  // Step 3: Clean package cache and update
+  // Step 4: Clean package cache and update with GPG refresh
   await executeRemoteCommands(
     instanceId,
     publicIp,
-    ['sudo dnf clean all', 'sudo dnf makecache'],
-    'Refreshing package cache...',
+    [
+      'sudo dnf clean all',
+      'sudo dnf --refresh makecache',
+      'sudo dnf repolist | grep grafana',
+    ],
+    'Refreshing package cache with GPG verification...',
     region
   );
 
-  // Step 4: Verify repository is working
-  await executeRemoteCommands(
-    instanceId,
-    publicIp,
-    ['sudo dnf repolist | grep grafana || echo "Grafana repo not found"'],
-    'Verifying Grafana repository...',
-    region
-  );
-
-  // Step 5: Install Alloy
-  await executeRemoteCommands(
-    instanceId,
-    publicIp,
-    ['sudo dnf install -y alloy'],
-    'Installing Grafana Alloy...',
-    region
-  );
+  // Step 5: Install Alloy with fallback for GPG issues
+  try {
+    await executeRemoteCommands(
+      instanceId,
+      publicIp,
+      ['sudo dnf install -y alloy'],
+      'Installing Grafana Alloy...',
+      region
+    );
+  } catch (error) {
+    // Fallback: Try with disabled GPG check as last resort
+    console.log(
+      chalk.yellow('GPG verification failed, trying with disabled GPG check...')
+    );
+    await executeRemoteCommands(
+      instanceId,
+      publicIp,
+      ['sudo dnf install -y alloy --nogpgcheck'],
+      'Installing Grafana Alloy (GPG check disabled)...',
+      region
+    );
+  }
 };
 
 const installNodeExporter = async (

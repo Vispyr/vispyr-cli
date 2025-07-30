@@ -1,5 +1,5 @@
 import { App } from 'aws-cdk-lib';
-import { Ec2Stack } from '../stacks/ec2-stack.js';
+import { VispyrBackend } from '../stacks/ec2-stack.js';
 import process from 'process';
 
 const main = async () => {
@@ -26,7 +26,7 @@ const main = async () => {
 
     console.log(`🔗 Using peer VPC: ${peerVpcId}`);
 
-    new Ec2Stack(app, 'Ec2Stack', {
+    new VispyrBackend(app, 'Ec2Stack', {
       env: { account, region },
       peerVpcId,
     });

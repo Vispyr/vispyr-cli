@@ -17,12 +17,12 @@ import {
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
-interface Ec2StackProps extends StackProps {
+interface VispyrBackendProps extends StackProps {
   peerVpcId: string;
 }
 
-export class Ec2Stack extends Stack {
-  constructor(scope: Construct, id: string, props: Ec2StackProps) {
+export class VispyrBackend extends Stack {
+  constructor(scope: Construct, id: string, props: VispyrBackendProps) {
     super(scope, id, props);
 
     const { peerVpcId } = props;
@@ -100,8 +100,9 @@ export class Ec2Stack extends Stack {
 
     // Allow access from peer VPC for Observability services
     const observabilityPorts = [
-      { port: 4173, description: 'OTLP' },
+      { port: 4317, description: 'OTLP' },
       { port: 9999, description: 'Pyroscope' },
+      { port: 9090, description: 'Node Exporter' },
     ];
 
     observabilityPorts.forEach(({ port, description }) => {
@@ -231,7 +232,7 @@ export class Ec2Stack extends Stack {
     );
 
     // Create EC2 instance in public subnet (needed for HTTPS access)
-    const instance = new Instance(this, 'ObservabilityInstance', {
+    const instance = new Instance(this, 'VispyrBackend', {
       vpc,
       instanceType: new InstanceType('t3.small'), // Upgraded from micro for better performance
       machineImage: MachineImage.latestAmazonLinux2023(),
