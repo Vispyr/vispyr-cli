@@ -5,10 +5,8 @@ import { Command } from 'commander';
 import figlet from 'figlet';
 import chalk from 'chalk';
 
-import deployAgent from './commands/deploy-agent.js';
-import destroyAgent from './commands/destroy-agent.js';
-import destroyBackend from './commands/destroy-backend.js';
-import deployBackend from './commands/deploy-backend.js';
+import destroyBackend from './commands/destroy.js';
+import deployBackend from './commands/deploy.js';
 
 console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
@@ -25,24 +23,14 @@ program
   .option('-t, --touch <value>', 'Create a file');
 
 program
-  .command('deploy-backend')
+  .command('deploy')
   .description('Deploys AWS architecture')
   .action(deployBackend);
 
 program
-  .command('destroy-backend')
+  .command('destroy')
   .description('Destroy AWS architecture')
   .action(destroyBackend);
-
-program
-  .command('deploy-agent')
-  .description('Adds agent to EC2 instance')
-  .action(deployAgent);
-
-program
-  .command('destroy-agent')
-  .description('Removes agent from EC2 instance')
-  .action(destroyAgent);
 
 program.parse();
 
