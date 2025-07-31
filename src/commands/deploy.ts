@@ -45,6 +45,12 @@ interface AddedRoute {
   peeringConnectionId: string;
 }
 
+const TITLE = 'blue bold';
+const SUCCESS = 'green';
+const ERROR = 'red';
+const INFO = 'yellow';
+const PROMPT = 'blue';
+
 let addedRoutes: AddedRoute[] = [];
 
 const getStackOutputs = async (): Promise<DeploymentOutputs> => {
@@ -514,51 +520,48 @@ const deployBackend = async () => {
       chalk.blue.bold('\nObservability Stack - Secure HTTPS Deployment\n')
     );
 
-    // Check for .env file and peer VPC configuration (mandatory)
     const { hasEnv, peerVpcId } = checkEnvFile();
 
     if (!hasEnv) {
-      console.log(chalk.red('.env file not found.'));
-      console.log(
-        chalk.yellow('Please create a .env file with PEER_VPC_ID=vpc-xxxxxxxxx')
+      logWithStyle(ERROR, '.env file not found.');
+      logWithStyle(
+        INFO,
+        'Please create a .env file with PEER_VPC_ID=vpc-xxxxxxxxx'
       );
       process.exit(1);
     }
 
     if (!peerVpcId) {
-      console.log(chalk.red('PEER_VPC_ID not found in .env file'));
-      console.log(
-        chalk.yellow('Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file')
+      logWithStyle(ERROR, 'PEER_VPC_ID not found in .env file');
+      logWithStyle(
+        INFO,
+        'Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file'
       );
       process.exit(1);
     }
 
-    console.log(chalk.blue(`VPC Peering configured: ${peerVpcId}`));
+    logWithStyle(PROMPT, `VPC Peering configured: ${peerVpcId}`);
 
-    // Validate peer VPC exists and get its CIDR
     const region =
       process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
     const peerVpcValidation = await validatePeerVpc(peerVpcId, region);
 
     if (!peerVpcValidation.isValid || !peerVpcValidation.cidrBlock) {
-      console.log(chalk.red(`Invalid or inaccessible peer VPC: ${peerVpcId}`));
+      logWithStyle(ERROR, `Invalid or inaccessible peer VPC: ${peerVpcId}`);
       process.exit(1);
     }
 
-    // Generate non-overlapping CIDR for the new VPC
     const newVpcCidr = generateNonOverlappingCidr(peerVpcValidation.cidrBlock);
-    console.log(chalk.blue(`New VPC will use CIDR: ${newVpcCidr}`));
+    logWithStyle(PROMPT, `New VPC will use CIDR: ${newVpcCidr}`);
 
-    // Get subnets in peer VPC for route table selection
-    console.log(chalk.blue('\nRetrieving peer VPC subnet information...'));
+    logWithStyle(PROMPT, '\n🔍 Retrieving peer VPC subnet information...');
     const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
 
     if (subnets.length === 0) {
-      console.log(chalk.red('No subnets found in peer VPC'));
+      logWithStyle(ERROR, 'No subnets found in peer VPC');
       process.exit(1);
     }
 
-    // Let user select which subnet's route table to modify
     const subnetChoices = subnets.map((subnet) => ({
       name: `${subnet.name} (${subnet.subnetId} - ${subnet.cidr})`,
       value: subnet,
@@ -576,10 +579,9 @@ const deployBackend = async () => {
       },
     ]);
 
-    console.log(
-      chalk.green(
-        `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
-      )
+    logWithStyle(
+      SUCCESS,
+      `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
     );
 
     const { confirmDeploy } = await inquirer.prompt([
@@ -592,21 +594,21 @@ const deployBackend = async () => {
     ]);
 
     if (!confirmDeploy) {
-      console.log(chalk.yellow('Deployment cancelled'));
+      logWithStyle(INFO, 'Deployment cancelled');
       return;
     }
 
     if (!hasCredentials()) {
-      console.log(chalk.yellow('AWS credentials not found. Starting init...'));
+      logWithStyle(INFO, 'AWS credentials not found. Starting init...');
       await init();
     }
 
     console.log(
-      chalk.green('Using AWS credentials for:'),
+      logWithStyle(SUCCESS, 'Using AWS credentials for:'),
       process.env.AWS_ACCESS_KEY_ID?.substring(0, 8) + '...'
     );
 
-    console.log(chalk.yellow('\nGenerating CDK templates...'));
+    logWithStyle(INFO, '\n📋 Generating CDK templates...');
     const synthSpinner = ora('Running CDK Synth...').start();
     try {
       await execAsync('npx cdk synth');
@@ -617,7 +619,7 @@ const deployBackend = async () => {
       process.exit(1);
     }
 
-    console.log(chalk.yellow('\nBootstrapping CDK (if needed)...'));
+    logWithStyle(INFO, '\nBootstrapping CDK (if needed)...');
     const bootstrapSpinner = ora('Running CDK bootstrap...').start();
     try {
       await execAsync('npx cdk bootstrap');
@@ -628,14 +630,9 @@ const deployBackend = async () => {
       process.exit(1);
     }
 
-    // Acknowledge notice
-    try {
-      await execAsync('npx cdk acknowledge 34892');
-    } catch (error) {
-      // Notice might not exist, continue
-    }
+    await acknowledgeNotice(34892);
 
-    console.log(chalk.yellow('\nDeploying secure infrastructure...'));
+    logWithStyle(INFO, '\nDeploying secure infrastructure...');
     const deploySpinner = ora(
       'Deploying VPC, NAT Gateway, VPC Peering, and EC2 instance...'
     ).start();
@@ -645,25 +642,21 @@ const deployBackend = async () => {
       );
       deploySpinner.succeed('Infrastructure deployed successfully');
 
-      if (
-        stderr &&
-        !stderr.includes('npm WARN') &&
-        !stderr.includes('[WARNING]')
-      ) {
-        console.log(chalk.gray(stderr));
+      if (stderr && !stderr.includes('npm WARN') && !stderr.includes('[WARNING]')) {
+        logWithStyle('gray', stderr);
       }
     } catch (error) {
       deploySpinner.fail('Infrastructure deployment failed');
       console.error(chalk.red(error));
       process.exit(1);
     }
-
-    // Get deployment outputs
+    
     const outputs = await getStackOutputs();
 
     if (!outputs.instanceId || !outputs.publicIp || !outputs.httpsEndpoint) {
-      console.log(
-        chalk.yellow('\nCould not automatically retrieve instance details.')
+      logWithStyle(
+        INFO,
+        '\nCould not automatically retrieve instance details.'
       );
       const { instanceId, publicIp } = await inquirer.prompt([
         {
@@ -689,7 +682,6 @@ const deployBackend = async () => {
       }.compute.amazonaws.com`;
     }
 
-    // Generate config.alloy file as soon as private IP is available
     if (outputs.privateIp) {
       try {
         await writeConfigAlloy(outputs.privateIp);
@@ -714,11 +706,9 @@ const deployBackend = async () => {
       process.exit(1);
     }
 
-    // Accept VPC peering connection if it exists
     if (outputs.peeringConnectionId) {
       await acceptPeeringConnection(outputs.peeringConnectionId, region);
 
-      // Add return route to the selected subnet's route table
       try {
         await addRouteToSubnet(
           selectedSubnet.routeTableId,
@@ -733,7 +723,6 @@ const deployBackend = async () => {
       }
     }
 
-    // Wait for instance to be ready
     if (outputs.instanceId) {
       await waitForInstanceReady(
         outputs.instanceId,
@@ -741,12 +730,10 @@ const deployBackend = async () => {
       );
     }
 
-    // Wait for HTTPS endpoint to be ready
     if (outputs.httpsEndpoint) {
       await waitForHTTPSReady(outputs.httpsEndpoint);
     }
 
-    // Show service information
     if (outputs.httpsEndpoint && outputs.publicIp) {
       showServiceInfo(outputs.httpsEndpoint);
     } else {
@@ -758,7 +745,6 @@ const deployBackend = async () => {
   } catch (err) {
     console.error(chalk.red('\nAn error occurred:'), err);
 
-    // Cleanup any routes we added before failing
     const region =
       process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
     await cleanupAddedRoutes(region);
