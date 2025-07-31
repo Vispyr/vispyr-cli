@@ -677,7 +677,7 @@ const deployBackend = async () => {
     ).start();
     try {
       const { stderr } = await execAsync(
-        'npx cdk deploy --require-approval never --outputs-file outputs.json'
+        'npx cdk deploy --quiet --require-approval never --outputs-file outputs.json'
       );
       deploySpinner.succeed('Infrastructure deployed successfully');
 
