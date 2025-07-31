@@ -25,6 +25,7 @@ const outputsPath = path.resolve(process.cwd(), 'outputs.json');
 interface DeploymentOutputs {
   instanceId?: string;
   publicIp?: string;
+  privateIp?: string;
   httpsEndpoint?: string;
   vpcId?: string;
   peeringConnectionId?: string;
@@ -64,6 +65,7 @@ const getStackOutputs = async (): Promise<DeploymentOutputs> => {
       return {
         instanceId: stackOutputs.InstanceId,
         publicIp: stackOutputs.InstancePublicIP,
+        privateIp: stackOutputs.InstancePrivateIp,
         httpsEndpoint: stackOutputs.HTTPSEndpoint,
         vpcId: stackOutputs.VpcId,
         peeringConnectionId: stackOutputs.PeeringConnectionId,
@@ -77,6 +79,118 @@ const getStackOutputs = async (): Promise<DeploymentOutputs> => {
       chalk.yellow('Could not retrieve stack outputs automatically')
     );
     return {};
+  }
+};
+
+const generateConfigAlloy = (privateIp: string): string => {
+  return `// Receivers
+otelcol.receiver.otlp "default" {
+ grpc {
+   endpoint = "0.0.0.0:4317"
+ }
+
+ http {
+   endpoint = "0.0.0.0:4318"
+ }
+
+ output {
+   traces = [otelcol.exporter.otlp.gateway_collector.input]
+   metrics = [otelcol.exporter.otlp.gateway_collector.input]
+ }
+}
+
+prometheus.scrape "node_metrics" {
+ targets = [{ __address__ = "localhost:9100" }]
+ forward_to = [prometheus.remote_write.gateway_collector.receiver]
+ scrape_interval = "15s"
+}
+
+pyroscope.receive_http "profiles_sdk" {
+ http {
+   listen_address = "0.0.0.0"
+   listen_port = 9999
+ }
+
+ forward_to = [pyroscope.write.gateway_collector.receiver]
+}
+
+// Processors
+otelcol.processor.batch "sdk_telemetry" {
+ output {
+   traces = [otelcol.exporter.otlp.gateway_collector.input]
+   metrics = [otelcol.exporter.otlp.gateway_collector.input]
+ }
+}
+
+// Exporters
+prometheus.remote_write "gateway_collector" {
+ endpoint {
+   url = "http://${privateIp}:9090/api/v1/metrics/write"
+ }
+}
+
+otelcol.exporter.otlp "gateway_collector" {
+ client {
+   endpoint = "${privateIp}:4317"
+   tls {
+     insecure = true
+     insecure_skip_verify = true
+   }
+ }
+}
+
+pyroscope.write "gateway_collector" {
+ endpoint {
+   url = "http://${privateIp}:9999"
+ }
+}
+
+livedebugging {
+ enabled = true
+}`;
+};
+
+const writeConfigAlloy = async (privateIp: string): Promise<void> => {
+  try {
+    const spinner = ora('Generating config.alloy file...').start();
+
+    const configContent = generateConfigAlloy(privateIp);
+    const configPath = path.resolve(
+      process.cwd(),
+      'vispyr_agent',
+      'config.alloy'
+    );
+
+    // Ensure the vispyr_agent directory exists
+    const vispyrAgentDir = path.dirname(configPath);
+    if (!fs.existsSync(vispyrAgentDir)) {
+      fs.mkdirSync(vispyrAgentDir, { recursive: true });
+    }
+
+    fs.writeFileSync(configPath, configContent, 'utf8');
+
+    spinner.succeed(
+      `config.alloy created at ${configPath} with private IP: ${privateIp}`
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to create config.alloy file: ${error.message}`);
+    } else {
+      throw new Error(`Failed to create config.alloy file: ${String(error)}`);
+    }
+  }
+};
+
+const tearDownInfrastructure = async (): Promise<void> => {
+  try {
+    console.log(chalk.yellow('\n🧹 Tearing down infrastructure...'));
+    const destroySpinner = ora('Running CDK destroy...').start();
+
+    await execAsync('npx cdk destroy --force');
+
+    destroySpinner.succeed('Infrastructure torn down successfully');
+  } catch (error) {
+    console.error(chalk.red('Failed to tear down infrastructure:'), error);
   }
 };
 
@@ -605,6 +719,31 @@ const deployBackend = async () => {
       outputs.httpsEndpoint = `https://ec2-${publicIp.replace(/\./g, '-')}.${
         process.env.AWS_REGION
       }.compute.amazonaws.com`;
+    }
+
+    // Generate config.alloy file as soon as private IP is available
+    if (outputs.privateIp) {
+      try {
+        await writeConfigAlloy(outputs.privateIp);
+      } catch (error) {
+        console.error(chalk.red('Failed to create config.alloy file:'), error);
+        console.log(
+          chalk.yellow(
+            'Cleaning up infrastructure due to config.alloy failure...'
+          )
+        );
+        await cleanupAddedRoutes(region);
+        await tearDownInfrastructure();
+        process.exit(1);
+      }
+    } else {
+      console.error(chalk.red('❌ Private IP not found in deployment outputs'));
+      console.log(
+        chalk.yellow('Cleaning up infrastructure due to missing private IP...')
+      );
+      await cleanupAddedRoutes(region);
+      await tearDownInfrastructure();
+      process.exit(1);
     }
 
     // Accept VPC peering connection if it exists
