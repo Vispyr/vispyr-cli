@@ -287,12 +287,10 @@ const validatePeerVpc = async (
       return { isValid: false };
     }
 
-    console.log(
-      chalk.green(`✅ Found peer VPC: ${peerVpcId} (${vpc.CidrBlock})`)
-    );
+    console.log(chalk.green(`Found peer VPC: ${peerVpcId} (${vpc.CidrBlock})`));
     return { isValid: true, cidrBlock: vpc.CidrBlock };
   } catch (error) {
-    console.error(chalk.red(`❌ Could not find VPC ${peerVpcId}:`, error));
+    console.error(chalk.red(`Could not find VPC ${peerVpcId}:`, error));
     return { isValid: false };
   }
 };
@@ -479,31 +477,12 @@ const waitForHTTPSReady = async (httpsEndpoint: string): Promise<void> => {
   );
 };
 
-const showServiceInfo = (
-  httpsEndpoint: string,
-  peeringInfo?: { peerVpcId: string; peeringConnectionId: string }
-): void => {
-  console.log(chalk.blue.bold('\n🎉 Deployment Complete!\n'));
+const showServiceInfo = (httpsEndpoint: string): void => {
+  console.log(chalk.blue.bold('\nDeployment Complete!\n'));
   console.log(chalk.green('Your observability stack is now running at:'));
   console.log(chalk.cyan.bold(`• Grafana (HTTPS): ${httpsEndpoint}`));
 
-  if (peeringInfo) {
-    console.log(chalk.blue.bold('\n🔗 VPC Peering Information:'));
-    console.log(chalk.green(`• Peer VPC ID: ${peeringInfo.peerVpcId}`));
-    console.log(
-      chalk.green(`• Peering Connection ID: ${peeringInfo.peeringConnectionId}`)
-    );
-    console.log(
-      chalk.green('• Return routes have been automatically configured')
-    );
-    console.log(
-      chalk.yellow(
-        '• Services are accessible from the peer VPC via private IPs'
-      )
-    );
-  }
-
-  console.log(chalk.yellow.bold('\n⚠️  Important Security Notice:'));
+  console.log(chalk.yellow.bold('\nImportant Security Notice:'));
   console.log(chalk.yellow('This deployment uses a self-signed certificate.'));
   console.log(
     chalk.yellow(
@@ -514,7 +493,7 @@ const showServiceInfo = (
     chalk.yellow('This is normal and expected for self-signed certificates.\n')
   );
 
-  console.log(chalk.blue('\n📋 Next Steps:'));
+  console.log(chalk.blue('Next Steps:'));
   console.log(
     chalk.white('1. Open the Grafana UI:'),
     chalk.green(httpsEndpoint)
@@ -527,32 +506,19 @@ const showServiceInfo = (
   console.log(chalk.white('3. Log in to Grafana'));
   console.log(chalk.white('   username:'), chalk.green('admin'));
   console.log(chalk.white('   password:'), chalk.green('admin'));
-
-  if (peeringInfo) {
-    console.log(chalk.blue('\n🔧 VPC Peering Setup:'));
-    console.log(
-      chalk.green('4. ✅ VPC peering connection has been created and accepted')
-    );
-    console.log(
-      chalk.green('5. ✅ Return routes have been automatically configured')
-    );
-    console.log(
-      chalk.green('6. ✅ Services are ready for cross-VPC communication')
-    );
-  }
 };
 
 const deployBackend = async () => {
   try {
     console.log(
-      chalk.blue.bold('\n🚀 Observability Stack - Secure HTTPS Deployment\n')
+      chalk.blue.bold('\nObservability Stack - Secure HTTPS Deployment\n')
     );
 
     // Check for .env file and peer VPC configuration (mandatory)
     const { hasEnv, peerVpcId } = checkEnvFile();
 
     if (!hasEnv) {
-      console.log(chalk.red('❌ .env file not found.'));
+      console.log(chalk.red('.env file not found.'));
       console.log(
         chalk.yellow('Please create a .env file with PEER_VPC_ID=vpc-xxxxxxxxx')
       );
@@ -560,14 +526,14 @@ const deployBackend = async () => {
     }
 
     if (!peerVpcId) {
-      console.log(chalk.red('❌ PEER_VPC_ID not found in .env file'));
+      console.log(chalk.red('PEER_VPC_ID not found in .env file'));
       console.log(
         chalk.yellow('Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file')
       );
       process.exit(1);
     }
 
-    console.log(chalk.blue(`🔗 VPC Peering configured: ${peerVpcId}`));
+    console.log(chalk.blue(`VPC Peering configured: ${peerVpcId}`));
 
     // Validate peer VPC exists and get its CIDR
     const region =
@@ -575,22 +541,20 @@ const deployBackend = async () => {
     const peerVpcValidation = await validatePeerVpc(peerVpcId, region);
 
     if (!peerVpcValidation.isValid || !peerVpcValidation.cidrBlock) {
-      console.log(
-        chalk.red(`❌ Invalid or inaccessible peer VPC: ${peerVpcId}`)
-      );
+      console.log(chalk.red(`Invalid or inaccessible peer VPC: ${peerVpcId}`));
       process.exit(1);
     }
 
     // Generate non-overlapping CIDR for the new VPC
     const newVpcCidr = generateNonOverlappingCidr(peerVpcValidation.cidrBlock);
-    console.log(chalk.blue(`📍 New VPC will use CIDR: ${newVpcCidr}`));
+    console.log(chalk.blue(`New VPC will use CIDR: ${newVpcCidr}`));
 
     // Get subnets in peer VPC for route table selection
-    console.log(chalk.blue('\n🔍 Retrieving peer VPC subnet information...'));
+    console.log(chalk.blue('\nRetrieving peer VPC subnet information...'));
     const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
 
     if (subnets.length === 0) {
-      console.log(chalk.red('❌ No subnets found in peer VPC'));
+      console.log(chalk.red('No subnets found in peer VPC'));
       process.exit(1);
     }
 
@@ -614,7 +578,7 @@ const deployBackend = async () => {
 
     console.log(
       chalk.green(
-        `✅ Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
+        `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
       )
     );
 
@@ -622,7 +586,7 @@ const deployBackend = async () => {
       {
         type: 'confirm',
         name: 'confirmDeploy',
-        message: `This will deploy a secure observability stack with VPC peering to ${peerVpcId} and automatically configure return routes. Continue?`,
+        message: `This will deploy a secure observability stack with VPC peering to ${peerVpcId} and automatically configure return routes.\n  Continue?`,
         default: false,
       },
     ]);
@@ -638,11 +602,11 @@ const deployBackend = async () => {
     }
 
     console.log(
-      chalk.green('✅ Using AWS credentials for:'),
+      chalk.green('Using AWS credentials for:'),
       process.env.AWS_ACCESS_KEY_ID?.substring(0, 8) + '...'
     );
 
-    console.log(chalk.yellow('\n📋 Generating CDK templates...'));
+    console.log(chalk.yellow('\nGenerating CDK templates...'));
     const synthSpinner = ora('Running CDK Synth...').start();
     try {
       await execAsync('npx cdk synth');
@@ -653,7 +617,7 @@ const deployBackend = async () => {
       process.exit(1);
     }
 
-    console.log(chalk.yellow('\n🥾 Bootstrapping CDK (if needed)...'));
+    console.log(chalk.yellow('\nBootstrapping CDK (if needed)...'));
     const bootstrapSpinner = ora('Running CDK bootstrap...').start();
     try {
       await execAsync('npx cdk bootstrap');
@@ -671,17 +635,21 @@ const deployBackend = async () => {
       // Notice might not exist, continue
     }
 
-    console.log(chalk.yellow('\n☁️  Deploying secure infrastructure...'));
+    console.log(chalk.yellow('\nDeploying secure infrastructure...'));
     const deploySpinner = ora(
       'Deploying VPC, NAT Gateway, VPC Peering, and EC2 instance...'
     ).start();
     try {
       const { stderr } = await execAsync(
-        'npx cdk deploy --quiet --require-approval never --outputs-file outputs.json'
+        'npx cdk deploy --quiet --require-approval never --outputs-file outputs.json > /dev/null'
       );
       deploySpinner.succeed('Infrastructure deployed successfully');
 
-      if (stderr && !stderr.includes('npm WARN')) {
+      if (
+        stderr &&
+        !stderr.includes('npm WARN') &&
+        !stderr.includes('[WARNING]')
+      ) {
         console.log(chalk.gray(stderr));
       }
     } catch (error) {
@@ -695,7 +663,7 @@ const deployBackend = async () => {
 
     if (!outputs.instanceId || !outputs.publicIp || !outputs.httpsEndpoint) {
       console.log(
-        chalk.yellow('\n⚠️  Could not automatically retrieve instance details.')
+        chalk.yellow('\nCould not automatically retrieve instance details.')
       );
       const { instanceId, publicIp } = await inquirer.prompt([
         {
@@ -737,7 +705,7 @@ const deployBackend = async () => {
         process.exit(1);
       }
     } else {
-      console.error(chalk.red('❌ Private IP not found in deployment outputs'));
+      console.error(chalk.red('Private IP not found in deployment outputs'));
       console.log(
         chalk.yellow('Cleaning up infrastructure due to missing private IP...')
       );
@@ -780,24 +748,15 @@ const deployBackend = async () => {
 
     // Show service information
     if (outputs.httpsEndpoint && outputs.publicIp) {
-      // VPC peering is now mandatory, so always include peering info
-      const peeringInfo =
-        outputs.peerVpcId && outputs.peeringConnectionId
-          ? {
-              peerVpcId: outputs.peerVpcId,
-              peeringConnectionId: outputs.peeringConnectionId,
-            }
-          : undefined;
-
-      showServiceInfo(outputs.httpsEndpoint, peeringInfo);
+      showServiceInfo(outputs.httpsEndpoint);
     } else {
-      console.log(chalk.green('\n✅ Infrastructure deployed successfully!'));
+      console.log(chalk.green('\nInfrastructure deployed successfully!'));
       console.log(
         chalk.yellow('Check your AWS console for the instance details.')
       );
     }
   } catch (err) {
-    console.error(chalk.red('\n❌ An error occurred:'), err);
+    console.error(chalk.red('\nAn error occurred:'), err);
 
     // Cleanup any routes we added before failing
     const region =
