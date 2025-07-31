@@ -18,6 +18,7 @@ import ora from 'ora';
 interface DeploymentOutputs {
   instanceId?: string;
   publicIp?: string;
+  privateIp?: string;
   httpsEndpoint?: string;
   vpcId?: string;
   peeringConnectionId?: string;
@@ -68,6 +69,7 @@ export const getStackOutputs = async (): Promise<DeploymentOutputs> => {
       return {
         instanceId: stackOutputs.InstanceId,
         publicIp: stackOutputs.InstancePublicIP,
+        privateIp: stackOutputs.InstancePrivateIp,
         httpsEndpoint: stackOutputs.HTTPSEndpoint,
         vpcId: stackOutputs.VpcId,
         peeringConnectionId: stackOutputs.PeeringConnectionId,
@@ -85,10 +87,8 @@ export const getStackOutputs = async (): Promise<DeploymentOutputs> => {
 };
 
 export const generateNonOverlappingCidr = (peerVpcCidr: string): string => {
-  // Extract the first two octets from peer VPC CIDR (e.g., "10.0" from "10.0.0.0/16")
   const peerOctets = peerVpcCidr.split('.').slice(0, 2);
 
-  // Generate a different second octet
   const secondOctet = parseInt(peerOctets[1]);
   const newSecondOctet = secondOctet === 0 ? 1 : secondOctet === 1 ? 2 : 0;
 
@@ -102,14 +102,12 @@ export const getSubnetsWithRouteTables = async (
   const ec2Client = new EC2Client({ region });
 
   try {
-    // Get all subnets in the VPC
     const subnetsResponse = await ec2Client.send(
       new DescribeSubnetsCommand({
         Filters: [{ Name: 'vpc-id', Values: [vpcId] }],
       })
     );
 
-    // Get all route tables in the VPC
     const routeTablesResponse = await ec2Client.send(
       new DescribeRouteTablesCommand({
         Filters: [{ Name: 'vpc-id', Values: [vpcId] }],
@@ -119,7 +117,6 @@ export const getSubnetsWithRouteTables = async (
     const subnets = subnetsResponse.Subnets || [];
     const routeTables = routeTablesResponse.RouteTables || [];
 
-    // Find the main route table
     const mainRouteTable = routeTables.find((rt) =>
       rt.Associations?.some((assoc) => assoc.Main)
     );
@@ -128,11 +125,9 @@ export const getSubnetsWithRouteTables = async (
       const subnetId = subnet.SubnetId!;
       const cidr = subnet.CidrBlock!;
 
-      // Get subnet name from tags
       const nameTag = subnet.Tags?.find((tag) => tag.Key === 'Name');
       const name = nameTag?.Value || 'Unnamed Subnet';
 
-      // Find associated route table
       let routeTableId = mainRouteTable?.RouteTableId!;
 
       for (const rt of routeTables) {
@@ -177,12 +172,10 @@ export const validatePeerVpc = async (
       return { isValid: false };
     }
 
-    console.log(
-      chalk.green(`✅ Found peer VPC: ${peerVpcId} (${vpc.CidrBlock})`)
-    );
+    console.log(chalk.green(`Found peer VPC: ${peerVpcId} (${vpc.CidrBlock})`));
     return { isValid: true, cidrBlock: vpc.CidrBlock };
   } catch (error) {
-    console.error(chalk.red(`❌ Could not find VPC ${peerVpcId}:`, error));
+    console.error(chalk.red(`Could not find VPC ${peerVpcId}:`, error));
     return { isValid: false };
   }
 };
@@ -371,31 +364,12 @@ export const waitForHTTPSReady = async (
   );
 };
 
-export const showServiceInfo = (
-  httpsEndpoint: string,
-  peeringInfo?: { peerVpcId: string; peeringConnectionId: string }
-): void => {
-  console.log(chalk.blue.bold('\n🎉 Deployment Complete!\n'));
+export const showServiceInfo = (httpsEndpoint: string): void => {
+  console.log(chalk.blue.bold('\nDeployment Complete!\n'));
   console.log(chalk.green('Your observability stack is now running at:'));
   console.log(chalk.cyan.bold(`• Grafana (HTTPS): ${httpsEndpoint}`));
 
-  if (peeringInfo) {
-    console.log(chalk.blue.bold('\n🔗 VPC Peering Information:'));
-    console.log(chalk.green(`• Peer VPC ID: ${peeringInfo.peerVpcId}`));
-    console.log(
-      chalk.green(`• Peering Connection ID: ${peeringInfo.peeringConnectionId}`)
-    );
-    console.log(
-      chalk.green('• Return routes have been automatically configured')
-    );
-    console.log(
-      chalk.yellow(
-        '• Services are accessible from the peer VPC via private IPs'
-      )
-    );
-  }
-
-  console.log(chalk.yellow.bold('\n⚠️  Important Security Notice:'));
+  console.log(chalk.yellow.bold('\nImportant Security Notice:'));
   console.log(chalk.yellow('This deployment uses a self-signed certificate.'));
   console.log(
     chalk.yellow(
@@ -406,7 +380,7 @@ export const showServiceInfo = (
     chalk.yellow('This is normal and expected for self-signed certificates.\n')
   );
 
-  console.log(chalk.blue('\n📋 Next Steps:'));
+  console.log(chalk.blue('Next Steps:'));
   console.log(
     chalk.white('1. Open the Grafana UI:'),
     chalk.green(httpsEndpoint)
@@ -419,19 +393,6 @@ export const showServiceInfo = (
   console.log(chalk.white('3. Log in to Grafana'));
   console.log(chalk.white('   username:'), chalk.green('admin'));
   console.log(chalk.white('   password:'), chalk.green('admin'));
-
-  if (peeringInfo) {
-    console.log(chalk.blue('\n🔧 VPC Peering Setup:'));
-    console.log(
-      chalk.green('4. ✅ VPC peering connection has been created and accepted')
-    );
-    console.log(
-      chalk.green('5. ✅ Return routes have been automatically configured')
-    );
-    console.log(
-      chalk.green('6. ✅ Services are ready for cross-VPC communication')
-    );
-  }
 };
 
 export const acknowledgeNotice = async (noticeId: number) => {
@@ -442,7 +403,7 @@ export const acknowledgeNotice = async (noticeId: number) => {
   }
 };
 
-export const logWithStyle = (color: Color, message: string) => {
+export const styleLog = (color: Color, message: string) => {
   switch (color) {
     case 'red':
       return console.log(chalk.red(message));
@@ -458,5 +419,117 @@ export const logWithStyle = (color: Color, message: string) => {
       return console.log(chalk.gray(message));
     case 'blue bold':
       return console.log(chalk.blue.bold(message));
+  }
+};
+
+export const generateConfigAlloy = (privateIp: string): string => {
+  return `// Receivers
+otelcol.receiver.otlp "default" {
+ grpc {
+   endpoint = "0.0.0.0:4317"
+ }
+
+ http {
+   endpoint = "0.0.0.0:4318"
+ }
+
+ output {
+   traces = [otelcol.exporter.otlp.gateway_collector.input]
+   metrics = [otelcol.exporter.otlp.gateway_collector.input]
+ }
+}
+
+prometheus.scrape "node_metrics" {
+ targets = [{ __address__ = "localhost:9100" }]
+ forward_to = [prometheus.remote_write.gateway_collector.receiver]
+ scrape_interval = "15s"
+}
+
+pyroscope.receive_http "profiles_sdk" {
+ http {
+   listen_address = "0.0.0.0"
+   listen_port = 9999
+ }
+
+ forward_to = [pyroscope.write.gateway_collector.receiver]
+}
+
+// Processors
+otelcol.processor.batch "sdk_telemetry" {
+ output {
+   traces = [otelcol.exporter.otlp.gateway_collector.input]
+   metrics = [otelcol.exporter.otlp.gateway_collector.input]
+ }
+}
+
+// Exporters
+prometheus.remote_write "gateway_collector" {
+ endpoint {
+   url = "http://${privateIp}:9090/api/v1/metrics/write"
+ }
+}
+
+otelcol.exporter.otlp "gateway_collector" {
+ client {
+   endpoint = "${privateIp}:4317"
+   tls {
+     insecure = true
+     insecure_skip_verify = true
+   }
+ }
+}
+
+pyroscope.write "gateway_collector" {
+ endpoint {
+   url = "http://${privateIp}:9999"
+ }
+}
+
+livedebugging {
+ enabled = true
+}`;
+};
+
+export const writeConfigAlloy = async (privateIp: string): Promise<void> => {
+  try {
+    const spinner = ora('Generating config.alloy file...').start();
+
+    const configContent = generateConfigAlloy(privateIp);
+    const configPath = path.resolve(
+      process.cwd(),
+      'vispyr_agent',
+      'config.alloy'
+    );
+
+    // Ensure the vispyr_agent directory exists
+    const vispyrAgentDir = path.dirname(configPath);
+    if (!fs.existsSync(vispyrAgentDir)) {
+      fs.mkdirSync(vispyrAgentDir, { recursive: true });
+    }
+
+    fs.writeFileSync(configPath, configContent, 'utf8');
+
+    spinner.succeed(
+      `config.alloy created at ${configPath} with private IP: ${privateIp}`
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to create config.alloy file: ${error.message}`);
+    } else {
+      throw new Error(`Failed to create config.alloy file: ${String(error)}`);
+    }
+  }
+};
+
+export const tearDownInfrastructure = async (): Promise<void> => {
+  try {
+    console.log(chalk.yellow('\n🧹 Tearing down infrastructure...'));
+    const destroySpinner = ora('Running CDK destroy...').start();
+
+    await execAsync('npx cdk destroy --force');
+
+    destroySpinner.succeed('Infrastructure torn down successfully');
+  } catch (error) {
+    console.error(chalk.red('Failed to tear down infrastructure:'), error);
   }
 };
