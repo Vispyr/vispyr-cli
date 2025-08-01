@@ -1,74 +1,59 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 import init from './init.js';
 import { hasCredentials } from '../utils/config.js';
+
+import { acknowledgeNotice, p } from '../utils/shared.js';
+import { getPeerVpcId } from '../utils/deploy_tools/envService.js';
+import validatePeerVpc from '../utils/deploy_tools/validatePeerVpc.js';
+import generateNonOverlappingCidr from '../utils/deploy_tools/generateNonOverlappingCidr.js';
+import getSubnetsWithRouteTables from '../utils/deploy_tools/getSubnetsWithRouteTables.js';
+import writeConfigAlloy from '../utils/deploy_tools/configAlloy.js';
+import teardownInfrastructure from '../utils/deploy_tools/teardownInfrastructure.js';
+import acceptPeeringConnection from '../utils/deploy_tools/acceptPeeringConnection.js';
+import waitForInstanceReady from '../utils/deploy_tools/waitforInstanceReady.js';
+import waitForHTTPSReady from '../utils/deploy_tools/waitForHTTPSReady.js';
+import showServiceInfo from '../utils/deploy_tools/showServiceInfo.js';
 import {
-  acceptPeeringConnection,
-  acknowledgeNotice,
   addRouteToSubnet,
-  checkEnvFile,
   cleanupAddedRoutes,
-  generateNonOverlappingCidr,
+} from '../utils/deploy_tools/routingService.js';
+import {
+  bootstrap,
+  deployInfrastructure,
+} from '../utils/deploy_tools/cdkDeploy.js';
+import {
   getStackOutputs,
-  getSubnetsWithRouteTables,
-  styleLog,
-  showServiceInfo,
-  tearDownInfrastructure,
-  validatePeerVpc,
-  waitForHTTPSReady,
-  waitForInstanceReady,
-  writeConfigAlloy,
-} from '../utils/deployTools.js';
+  promptInstanceData,
+} from '../utils/deploy_tools/outputService.js';
 
 const execAsync = promisify(exec);
 
-const TITLE = 'blue bold';
-const SUCCESS = 'green';
 const ERROR = 'red';
 const INFO = 'yellow';
-const PROMPT = 'blue';
 
 const deployBackend = async () => {
   try {
-    styleLog(TITLE, '\nVispyr Backend - Secure HTTPS Deployment\n');
+    p(chalk.blue.bold('\nVispyr Backend - Secure HTTPS Deployment\n'));
 
-    const { hasEnv, peerVpcId } = checkEnvFile();
+    const peerVpcId = getPeerVpcId();
 
-    if (!hasEnv) {
-      styleLog(ERROR, '.env file not found.');
-      styleLog(
-        INFO,
-        'Please create a .env file with PEER_VPC_ID=vpc-xxxxxxxxx'
-      );
-      process.exit(1);
-    }
-
-    if (!peerVpcId) {
-      styleLog(ERROR, 'PEER_VPC_ID not found in .env file');
-      styleLog(INFO, 'Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file');
-      process.exit(1);
-    }
-
-    const region =
-      process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
+    const region = process.env.AWS_REGION as string;
     const peerVpcValidation = await validatePeerVpc(peerVpcId, region);
 
     if (!peerVpcValidation.isValid || !peerVpcValidation.cidrBlock) {
-      styleLog(ERROR, `Invalid or inaccessible peer VPC: ${peerVpcId}`);
+      p(ERROR, `Invalid or inaccessible peer VPC: ${peerVpcId}`);
       process.exit(1);
     }
 
     const newVpcCidr = generateNonOverlappingCidr(peerVpcValidation.cidrBlock);
-    styleLog(PROMPT, `New VPC will use CIDR: ${newVpcCidr}`);
-
-    styleLog(PROMPT, '\nRetrieving peer VPC subnet information...');
     const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
 
     if (subnets.length === 0) {
-      styleLog(ERROR, 'No subnets found in peer VPC');
+      p(ERROR, 'No subnets found in peer VPC');
       process.exit(1);
     }
 
@@ -89,9 +74,10 @@ const deployBackend = async () => {
       },
     ]);
 
-    styleLog(
-      SUCCESS,
-      `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
+    p(
+      chalk.green(
+        `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
+      )
     );
 
     const { confirmDeploy } = await inquirer.prompt([
@@ -104,16 +90,16 @@ const deployBackend = async () => {
     ]);
 
     if (!confirmDeploy) {
-      styleLog(INFO, 'Deployment cancelled');
+      p(INFO, 'Deployment cancelled');
       return;
     }
 
     if (!hasCredentials()) {
-      styleLog(INFO, 'AWS credentials not found. Starting init...');
+      p(INFO, 'AWS credentials not found. Starting init...');
       await init();
     }
 
-    styleLog(INFO, '\nGenerating CDK templates...');
+    p(INFO, '\nGenerating CDK templates...');
     const synthSpinner = ora('Running CDK Synth...').start();
     try {
       await execAsync('npx cdk synth');
@@ -124,77 +110,14 @@ const deployBackend = async () => {
       process.exit(1);
     }
 
-    styleLog(INFO, '\nBootstrapping CDK (if needed)...');
-    const bootstrapSpinner = ora('Running CDK bootstrap...').start();
-    try {
-      await execAsync('npx cdk bootstrap');
-      bootstrapSpinner.succeed('CDK bootstrapped successfully');
-    } catch (error) {
-      bootstrapSpinner.fail('CDK bootstrap failed');
-      console.error(chalk.red('Error:'), error);
-      process.exit(1);
-    }
-
+    await bootstrap();
     await acknowledgeNotice(34892);
-
-    styleLog(INFO, '\nDeploying secure infrastructure...');
-    try {
-      const cdkDeploy = spawn(
-        'npx',
-        [
-          'cdk',
-          'deploy',
-          '--require-approval',
-          'never',
-          '--outputs-file',
-          'outputs.json',
-        ],
-        {
-          stdio: 'inherit',
-          env: { ...process.env },
-        }
-      );
-
-      await new Promise<void>((res, rej) => {
-        cdkDeploy.on('close', (code) => {
-          if (code === 0) {
-            res();
-          } else {
-            rej(new Error(`CDK deploy failed with code ${code}`));
-          }
-        });
-      });
-    } catch (error) {
-      console.error(chalk.red(error));
-      process.exit(1);
-    }
+    await deployInfrastructure();
 
     const outputs = await getStackOutputs();
 
     if (!outputs.instanceId || !outputs.publicIp || !outputs.httpsEndpoint) {
-      styleLog(INFO, '\nCould not automatically retrieve instance details.');
-      const { instanceId, publicIp } = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'instanceId',
-          message: 'Enter the EC2 instance ID:',
-          validate: (input) =>
-            input.trim().length > 0 || 'Instance ID is required',
-        },
-        {
-          type: 'input',
-          name: 'publicIp',
-          message: 'Enter the public IP address:',
-          validate: (input) =>
-            /^\d+\.\d+\.\d+\.\d+$/.test(input) || 'Valid IP address required',
-        },
-      ]);
-
-      outputs.instanceId = instanceId;
-      outputs.publicIp = publicIp;
-      outputs.httpsEndpoint = `https://ec2-${publicIp.replace(/\./g, '-')}.${
-        process.env.AWS_REGION
-      }.compute.amazonaws.com`;
+      await promptInstanceData(outputs);
     }
 
     if (outputs.privateIp) {
@@ -202,22 +125,22 @@ const deployBackend = async () => {
         await writeConfigAlloy(outputs.privateIp);
       } catch (error) {
         console.error(chalk.red('Failed to create config.alloy file:'), error);
-        console.log(
+        p(
           chalk.yellow(
             'Cleaning up infrastructure due to config.alloy failure...'
           )
         );
         await cleanupAddedRoutes(region);
-        await tearDownInfrastructure();
+        await teardownInfrastructure();
         process.exit(1);
       }
     } else {
       console.error(chalk.red('Private IP not found in deployment outputs'));
-      console.log(
+      p(
         chalk.yellow('Cleaning up infrastructure due to missing private IP...')
       );
       await cleanupAddedRoutes(region);
-      await tearDownInfrastructure();
+      await teardownInfrastructure();
       process.exit(1);
     }
 
@@ -252,10 +175,8 @@ const deployBackend = async () => {
     if (outputs.httpsEndpoint && outputs.publicIp) {
       showServiceInfo(outputs.httpsEndpoint);
     } else {
-      console.log(chalk.green('\nInfrastructure deployed successfully!'));
-      console.log(
-        chalk.yellow('Check your AWS console for the instance details.')
-      );
+      p(chalk.green('\nInfrastructure deployed successfully!'));
+      p(chalk.yellow('Check your AWS console for the instance details.'));
     }
   } catch (err) {
     console.error(chalk.red('\nAn error occurred:'), err);

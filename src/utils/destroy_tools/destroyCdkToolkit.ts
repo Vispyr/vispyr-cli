@@ -6,11 +6,15 @@ import {
   ListStacksCommand,
 } from '@aws-sdk/client-cloudformation';
 import ora from 'ora';
+import { styleLog } from '../shared';
 
-async function destroyCdkToolkit(
+const INFO = 'yellow';
+
+const destroyCdkToolkit = async (
   region: string,
   stackName: string = 'CDKToolkit'
-) {
+) => {
+  styleLog(INFO, '\nDestroying CDKToolkit...');
   const otherCdkStacks = await checkForOtherCdkStacks(region);
 
   if (otherCdkStacks.length > 0) {
@@ -63,7 +67,7 @@ async function destroyCdkToolkit(
       console.error(`Error deleting stack ${stackName}:`, error);
     }
   }
-}
+};
 
 const checkForOtherCdkStacks = async (
   region: string,
