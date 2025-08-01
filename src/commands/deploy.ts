@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import init from './init.js';
 import { hasCredentials } from '../utils/config.js';
@@ -33,7 +33,7 @@ const PROMPT = 'blue';
 
 const deployBackend = async () => {
   try {
-    styleLog(TITLE, '\nObservability Stack - Secure HTTPS Deployment\n');
+    styleLog(TITLE, '\nVispyr Backend - Secure HTTPS Deployment\n');
 
     const { hasEnv, peerVpcId } = checkEnvFile();
 
@@ -51,8 +51,6 @@ const deployBackend = async () => {
       styleLog(INFO, 'Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file');
       process.exit(1);
     }
-
-    styleLog(PROMPT, `VPC Peering configured: ${peerVpcId}`);
 
     const region =
       process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
@@ -100,7 +98,7 @@ const deployBackend = async () => {
       {
         type: 'confirm',
         name: 'confirmDeploy',
-        message: `This will deploy a secure observability stack with VPC peering to ${peerVpcId} and automatically configure return routes.\n  Continue?`,
+        message: `This will deploy a the Vispyr Backend stack with VPC peering to ${peerVpcId} and automatically configure return routes.\n  Continue?`,
         default: false,
       },
     ]);
@@ -114,11 +112,6 @@ const deployBackend = async () => {
       styleLog(INFO, 'AWS credentials not found. Starting init...');
       await init();
     }
-
-    console.log(
-      chalk.green('Using AWS credentials for:'),
-      process.env.AWS_ACCESS_KEY_ID?.substring(0, 8) + '...'
-    );
 
     styleLog(INFO, '\nGenerating CDK templates...');
     const synthSpinner = ora('Running CDK Synth...').start();
@@ -145,24 +138,33 @@ const deployBackend = async () => {
     await acknowledgeNotice(34892);
 
     styleLog(INFO, '\nDeploying secure infrastructure...');
-    const deploySpinner = ora(
-      'Deploying VPC, NAT Gateway, VPC Peering, and EC2 instance...'
-    ).start();
     try {
-      const { stderr } = await execAsync(
-        'npx cdk deploy --quiet --require-approval never --outputs-file outputs.json > /dev/null'
+      const cdkDeploy = spawn(
+        'npx',
+        [
+          'cdk',
+          'deploy',
+          '--require-approval',
+          'never',
+          '--outputs-file',
+          'outputs.json',
+        ],
+        {
+          stdio: 'inherit',
+          env: { ...process.env },
+        }
       );
-      deploySpinner.succeed('Infrastructure deployed successfully');
 
-      if (
-        stderr &&
-        !stderr.includes('npm WARN') &&
-        !stderr.includes('[WARNING]')
-      ) {
-        styleLog('gray', stderr);
-      }
+      await new Promise<void>((res, rej) => {
+        cdkDeploy.on('close', (code) => {
+          if (code === 0) {
+            res();
+          } else {
+            rej(new Error(`CDK deploy failed with code ${code}`));
+          }
+        });
+      });
     } catch (error) {
-      deploySpinner.fail('Infrastructure deployment failed');
       console.error(chalk.red(error));
       process.exit(1);
     }

@@ -330,48 +330,48 @@ verify_services() {
     
     # Check Node Exporter
     if is_service_running "node_exporter"; then
-        log_success "✅ Node Exporter is running"
+        log_success "Node Exporter is running"
         # Test endpoint
         if curl -s http://localhost:9100/metrics | head -1 >/dev/null 2>&1; then
-            log_success "✅ Node Exporter metrics endpoint responding"
+            log_success "Node Exporter metrics endpoint responding"
         else
-            log_warn "⚠️  Node Exporter metrics endpoint not responding"
+            log_warn "Node Exporter metrics endpoint not responding"
         fi
     else
-        log_warn "⚠️  Node Exporter is not running - check logs: sudo journalctl -u node_exporter"
+        log_warn "Node Exporter is not running - check logs: sudo journalctl -u node_exporter"
         verification_failed=true
     fi
     
     # Check Alloy
     if service_exists "alloy"; then
         if is_service_running "alloy"; then
-            log_success "✅ Grafana Alloy is running"
+            log_success "Grafana Alloy is running"
             
             # Test OTLP endpoints
             if timeout 5 curl -s http://localhost:4318/v1/traces -X POST -H "Content-Type: application/json" -d "{}" >/dev/null 2>&1; then
-                log_success "✅ Alloy OTLP HTTP endpoint responding"
+                log_success "Alloy OTLP HTTP endpoint responding"
             else
-                log_warn "⚠️  Alloy OTLP HTTP endpoint not responding (may be normal during startup)"
+                log_warn "Alloy OTLP HTTP endpoint not responding (may be normal during startup)"
             fi
         else
-            log_warn "⚠️  Grafana Alloy installed but not running - check logs: sudo journalctl -u alloy"
-            log_warn "⚠️  This may be due to network connectivity issues with Vispyr backend"
+            log_warn "Grafana Alloy installed but not running - check logs: sudo journalctl -u alloy"
+            log_warn "This may be due to network connectivity issues with Vispyr backend"
             verification_failed=true
         fi
     else
-        log_warn "⚠️  Grafana Alloy service not available"
+        log_warn "Grafana Alloy service not available"
         verification_failed=true
     fi
     
     if [ "$verification_failed" = true ]; then
-        log_warn "⚠️  Some monitoring services have issues but continuing with application startup"
-        log_info "💡 You can check service logs later and restart them if needed"
+        log_warn "Some monitoring services have issues but continuing with application startup"
+        log_info "You can check service logs later and restart them if needed"
     fi
 }
 
 # Main function
 main() {
-    log_info "🤖 Starting Vispyr Monitoring Agent Setup"
+    log_info "Starting Vispyr Monitoring Agent Setup"
     
     # Make script executable (handle automation requirement)
     chmod +x "$0" 2>/dev/null || true
@@ -411,16 +411,16 @@ main() {
     
     # Success message
     echo
-    log_success "🎉 Vispyr Monitoring Agent Setup Complete!"
+    log_success "Vispyr Monitoring Agent Setup Complete!"
     echo
-    log_info "📊 Monitoring Endpoints:"
+    log_info "Monitoring Endpoints:"
     log_info "• Node Exporter: http://localhost:9100/metrics"
     log_info "• Alloy OTLP (gRPC): localhost:4317"
     log_info "• Alloy OTLP (HTTP): localhost:4318"
     log_info "• Alloy Pyroscope: localhost:9999"
     echo
-    log_info "💡 Services are configured to start automatically on boot"
-    log_info "🚀 Your Node.js application will now start..."
+    log_info "Services are configured to start automatically on boot"
+    log_info "Your Node.js application will now start..."
     echo
 }
 

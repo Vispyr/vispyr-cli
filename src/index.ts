@@ -2,13 +2,16 @@
 
 import 'dotenv/config';
 import { Command } from 'commander';
-import figlet from 'figlet';
+// import figlet from 'figlet';
 import chalk from 'chalk';
 
 import destroyBackend from './commands/destroy.js';
 import deployBackend from './commands/deploy.js';
+import logo from './utils/logo.js';
 
-console.log(chalk.redBright(figlet.textSync('Vispyr')));
+console.clear();
+console.log(chalk.redBright(logo));
+// console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
 
 const program = new Command();

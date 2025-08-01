@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import inquirer from 'inquirer';
 import ora from 'ora';
 import path from 'path';
@@ -20,8 +20,15 @@ import {
 } from '@aws-sdk/client-ec2';
 import fs from 'fs-extra';
 import destroyCdkToolkit from '../utils/destroyCdkToolkit.js';
+import { styleLog } from '../utils/deployTools.js';
 
 const execAsync = promisify(exec);
+
+const TITLE = 'blue bold';
+const SUCCESS = 'green';
+// const ERROR = 'red';
+const INFO = 'yellow';
+// const PROMPT = 'blue';
 
 const cleanupVpcPeeringRoutes = async (
   peerVpcId: string,
@@ -33,7 +40,6 @@ const cleanupVpcPeeringRoutes = async (
   try {
     const ec2 = new EC2Client({ region });
 
-    // Get all route tables in the peer VPC
     const { RouteTables } = await ec2.send(
       new DescribeRouteTablesCommand({
         Filters: [
@@ -53,7 +59,6 @@ const cleanupVpcPeeringRoutes = async (
     let routesRemoved = 0;
     let routeTablesProcessed = 0;
 
-    // Process each route table
     for (const routeTable of RouteTables) {
       if (!routeTable.RouteTableId || !routeTable.Routes) {
         continue;
@@ -61,12 +66,10 @@ const cleanupVpcPeeringRoutes = async (
 
       routeTablesProcessed++;
 
-      // Find routes that use the peering connection
       const peeringRoutes = routeTable.Routes.filter(
         (route) => route.VpcPeeringConnectionId === peeringConnectionId
       );
 
-      // Remove each peering route
       for (const route of peeringRoutes) {
         if (!route.DestinationCidrBlock) {
           continue;
@@ -83,7 +86,6 @@ const cleanupVpcPeeringRoutes = async (
           routesRemoved++;
           routeSpinner.text = `Removed route ${route.DestinationCidrBlock} from route table ${routeTable.RouteTableId}`;
         } catch (routeError) {
-          // Log but continue with other routes
           console.log(
             chalk.yellow(
               `Warning: Could not remove route ${route.DestinationCidrBlock} from ${routeTable.RouteTableId}: ${routeError}`
@@ -110,16 +112,14 @@ const cleanupVpcPeeringRoutes = async (
 
 const destroyBackend = async () => {
   try {
-    console.log(
-      chalk.blue.bold('\n🗑️  Observability Stack - Complete Teardown\n')
-    );
+    styleLog(TITLE, '\nVispyr Backend - Complete Teardown\n');
 
     const { confirmTeardown } = await inquirer.prompt([
       {
         type: 'confirm',
         name: 'confirmTeardown',
         message:
-          'This will delete the EC2 instance, VPC, NAT Gateway, Elastic IP, CDKToolkit stack, and bootstrap S3 bucket. Continue?',
+          'This will delete the Vispyr EC2 instance, VPC, NAT Gateway, Elastic IP, CDKToolkit stack, and bootstrap S3 bucket. Continue?',
         default: false,
       },
     ]);
@@ -129,14 +129,8 @@ const destroyBackend = async () => {
       return;
     }
 
-    // Acknowledge notice (ignore if it doesn't exist)
-    try {
-      await execAsync('npx cdk acknowledge 34892');
-    } catch (error) {
-      // Notice might not exist, continue
-    }
+    await execAsync('npx cdk acknowledge 34892');
 
-    // 1. Check for any unattached Elastic IPs before destroying stack
     const eipSpinner = ora('Checking for Elastic IPs...').start();
     try {
       const ec2 = new EC2Client({ region: process.env.AWS_REGION });
@@ -156,9 +150,7 @@ const destroyBackend = async () => {
       );
     }
 
-    // 2. Clean up VPC peering routes from peer VPC
     try {
-      // Read outputs to get peering connection details
       const outputsPath = path.resolve(process.cwd(), 'outputs.json');
 
       if (fs.existsSync(outputsPath)) {
@@ -166,9 +158,9 @@ const destroyBackend = async () => {
         const stackName = Object.keys(outputs)[0];
         const stackOutputs = outputs[stackName];
 
-        if (stackOutputs.PeerVpcId && stackOutputs.PeeringConnectionId) {
+        if (process.env.PEER_VPC_ID && stackOutputs.PeeringConnectionId) {
           await cleanupVpcPeeringRoutes(
-            stackOutputs.PeerVpcId,
+            process.env.PEER_VPC_ID as string,
             stackOutputs.PeeringConnectionId,
             process.env.AWS_REGION as string
           );
@@ -192,27 +184,32 @@ const destroyBackend = async () => {
       );
     }
 
-    // 3. Destroy Ec2Stack
-    const destroySpinner = ora(
-      'Destroying observability stack (VPC, EC2, NAT Gateway, etc.)...'
-    ).start();
+    styleLog(INFO, '\nDestroying Vispyr stack...');
     try {
-      const { stdout, stderr } = await execAsync(
-        'npx cdk destroy Ec2Stack --force'
+      const cdkDestroy = spawn(
+        'npx',
+        ['cdk', 'destroy', 'VispyrStack', '--force'],
+        {
+          stdio: 'inherit',
+          env: { ...process.env },
+        }
       );
-      destroySpinner.succeed('Observability stack destroyed successfully');
 
-      if (stdout) console.log(chalk.gray(stdout));
-      if (stderr && !stderr.includes('npm WARN')) {
-        console.log(chalk.gray(stderr));
-      }
+      await new Promise<void>((res, rej) => {
+        cdkDestroy.on('close', (code) => {
+          if (code === 0) {
+            styleLog(SUCCESS, 'Vispyr stack destroyed successfully');
+            res();
+          } else {
+            rej(new Error(`CDK destroy failed with code ${code}`));
+          }
+        });
+      });
     } catch (error) {
-      destroySpinner.fail('Failed to destroy observability stack');
-      console.error(chalk.red(error));
+      console.error(chalk.red('Failed to destroy Vispyr stack:'), error);
       // Continue with other cleanup even if stack destruction fails
     }
 
-    // 4. Clean up any remaining Elastic IPs (sometimes they don't get released automatically)
     const eipCleanupSpinner = ora(
       'Cleaning up any remaining Elastic IPs...'
     ).start();
@@ -245,17 +242,13 @@ const destroyBackend = async () => {
       );
     }
 
-    // 5. Destroy CDKToolkit
-    const toolkitSpinner = ora('Destroying CDKToolkit stack...').start();
+    styleLog(INFO, '\nDestroying CDKToolkit...');
     try {
       await destroyCdkToolkit(process.env.AWS_REGION as string);
-      toolkitSpinner.succeed('CDKToolkit destroyed successfully');
     } catch (error) {
-      toolkitSpinner.fail('Failed to destroy CDKToolkit');
       console.error(chalk.red(error));
     }
 
-    // 6. Remove CDK Bootstrap S3 Bucket
     const bucketSpinner = ora(
       'Searching for CDK bootstrap S3 bucket...'
     ).start();
@@ -271,14 +264,12 @@ const destroyBackend = async () => {
     } else {
       bucketSpinner.text = `Emptying bucket ${bootstrapBucket.Name}...`;
 
-      // Helper function to empty bucket completely (including all versions)
       const emptyBucket = async (bucketName: string): Promise<void> => {
         let isTruncated: boolean = true;
         let keyMarker: string | undefined;
         let versionIdMarker: string | undefined;
 
         while (isTruncated) {
-          // List all object versions (current and non-current)
           const listParams = {
             Bucket: bucketName,
             KeyMarker: keyMarker,
@@ -295,7 +286,6 @@ const destroyBackend = async () => {
 
           const objectsToDelete: Array<{ Key: string; VersionId: string }> = [];
 
-          // Add all versions to delete list
           if (listedVersions.Versions) {
             listedVersions.Versions.forEach((version) => {
               if (version.Key && version.VersionId) {
@@ -307,7 +297,6 @@ const destroyBackend = async () => {
             });
           }
 
-          // Add all delete markers to delete list
           if (listedVersions.DeleteMarkers) {
             listedVersions.DeleteMarkers.forEach((marker) => {
               if (marker.Key && marker.VersionId) {
@@ -319,7 +308,6 @@ const destroyBackend = async () => {
             });
           }
 
-          // Delete objects in batches (AWS limit is 1000 per request)
           if (objectsToDelete.length > 0) {
             const batchSize: number = 1000;
             for (let i = 0; i < objectsToDelete.length; i += batchSize) {
@@ -342,7 +330,6 @@ const destroyBackend = async () => {
         }
       };
 
-      // Empty the bucket completely
       await emptyBucket(bootstrapBucket.Name);
 
       bucketSpinner.text = `Deleting bucket ${bootstrapBucket.Name}...`;
@@ -351,10 +338,8 @@ const destroyBackend = async () => {
       bucketSpinner.succeed(`Bucket ${bootstrapBucket.Name} deleted`);
     }
 
-    // 7. Local File Cleanup
     const cleanupSpinner = ora('Cleaning up local files...').start();
     try {
-      // Remove CDK generated files
       if (fs.existsSync('cdk.out')) fs.removeSync('cdk.out');
       if (fs.existsSync('cdk.context.json')) fs.removeSync('cdk.context.json');
       if (fs.existsSync('outputs.json')) fs.removeSync('outputs.json');
@@ -365,20 +350,12 @@ const destroyBackend = async () => {
       cleanupSpinner.warn('Some local files could not be cleaned up');
     }
 
-    console.log(chalk.green.bold('\n✅ Complete teardown finished!'));
-    console.log(
-      chalk.gray('All AWS resources and local files have been cleaned up.')
-    );
-    console.log(
-      chalk.gray(
-        'Please verify in your AWS console that all resources are deleted.\n'
-      )
-    );
+    console.log(chalk.green.bold('\nComplete teardown finished!'));
   } catch (err) {
-    console.error(chalk.red('\n❌ An error occurred during teardown:'), err);
+    console.error(chalk.red('\nAn error occurred during teardown:'), err);
     console.log(
       chalk.yellow(
-        '\n⚠️  Please check your AWS console to manually clean up any remaining resources.'
+        '\nPlease check your AWS console to manually clean up any remaining resources.'
       )
     );
     process.exit(1);

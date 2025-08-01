@@ -12,21 +12,19 @@ const main = async () => {
 
     // Validate that peerVpcId is provided (mandatory)
     if (!peerVpcId) {
-      console.error('❌ PEER_VPC_ID is required but not found in .env file');
+      console.error('PEER_VPC_ID is required but not found in .env file');
       console.error('Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file');
       process.exit(1);
     }
 
     // Validate peer VPC ID format
     if (!peerVpcId.match(/^vpc-[a-z0-9]{8,17}$/)) {
-      console.error(`❌ Invalid PEER_VPC_ID format: ${peerVpcId}`);
+      console.error(`Invalid PEER_VPC_ID format: ${peerVpcId}`);
       console.error('Expected format: vpc-xxxxxxxxx');
       process.exit(1);
     }
 
-    console.log(`🔗 Using peer VPC: ${peerVpcId}`);
-
-    new VispyrBackend(app, 'Ec2Stack', {
+    new VispyrBackend(app, 'VispyrStack', {
       env: { account, region },
       peerVpcId,
     });

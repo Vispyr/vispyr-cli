@@ -12,6 +12,7 @@ import {
   CfnVPCPeeringConnection,
   CfnRoute,
   IVpc,
+  IpAddresses,
 } from 'aws-cdk-lib/aws-ec2';
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
@@ -36,7 +37,7 @@ export class VispyrBackend extends Stack {
 
     const vpc = new Vpc(this, 'VispyrVPC', {
       maxAzs: 2,
-      cidr: '10.1.0.0/16',
+      ipAddresses: IpAddresses.cidr('10.1.0.0/16'),
       subnetConfiguration: [
         {
           cidrMask: 24,
@@ -149,17 +150,6 @@ export class VispyrBackend extends Stack {
       description: 'HTTPS endpoint for Grafana access',
     });
 
-    new CfnOutput(this, 'VPCId', {
-      value: vpc.vpcId,
-      exportName: 'VispyrVPCId',
-      description: 'VPC ID for the observability stack',
-    });
-
-    new CfnOutput(this, 'VpcCidr', {
-      value: vpc.vpcCidrBlock,
-      description: 'CIDR block of the created VPC',
-    });
-
     new CfnOutput(this, 'InstancePrivateIp', {
       value: instance.instancePrivateIp,
       description: 'Private IP of the EC2 instance',
@@ -168,16 +158,6 @@ export class VispyrBackend extends Stack {
     new CfnOutput(this, 'PeeringConnectionId', {
       value: peeringConnection.attrId,
       description: 'VPC Peering Connection ID',
-    });
-
-    new CfnOutput(this, 'PeerVpcId', {
-      value: peerVpcId,
-      description: 'Peer VPC ID',
-    });
-
-    new CfnOutput(this, 'PeerVpcCidr', {
-      value: peerVpc.vpcCidrBlock,
-      description: 'Peer VPC CIDR block',
     });
   }
 
