@@ -11,7 +11,6 @@ import logo from './utils/logo.js';
 
 console.clear();
 console.log(chalk.redBright(logo));
-// console.log(chalk.redBright(figlet.textSync('Vispyr')));
 console.log('');
 
 const program = new Command();
@@ -19,11 +18,7 @@ const program = new Command();
 program
   .version('1.0.0')
   .name('vispyr-cli')
-  .description('A CLI application built with Commander.js')
-  .option('-d, --debug', 'Output extra debugging information')
-  .option('-l, --ls [value]', 'List directory contents')
-  .option('-m, --mkdir <value>', 'Create a directory')
-  .option('-t, --touch <value>', 'Create a file');
+  .description('Command Line Tool used to deploy Vispyr Backend to AWS');
 
 program
   .command('deploy')
@@ -36,9 +31,3 @@ program
   .action(destroyBackend);
 
 program.parse();
-
-const options = program.opts();
-if (options.debug) {
-  console.log('Debug mode is enabled');
-  console.log('Options:', options);
-}
