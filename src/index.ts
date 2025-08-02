@@ -22,12 +22,12 @@ program
 
 program
   .command('deploy')
-  .description('Deploys AWS architecture')
+  .description('Deploys AWS infrastructure')
   .action(deployBackend);
 
 program
   .command('destroy')
-  .description('Destroy AWS architecture')
+  .description('Destroy AWS infrastructure')
   .action(destroyBackend);
 
 program.parse();
