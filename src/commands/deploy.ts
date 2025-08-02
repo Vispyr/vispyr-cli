@@ -10,7 +10,6 @@ import { acknowledgeNotice, p } from '../utils/shared.js';
 import { getPeerVpcId } from '../utils/deploy_tools/envService.js';
 import validatePeerVpc from '../utils/deploy_tools/validatePeerVpc.js';
 import generateNonOverlappingCidr from '../utils/deploy_tools/generateNonOverlappingCidr.js';
-import getSubnetsWithRouteTables from '../utils/deploy_tools/getSubnetsWithRouteTables.js';
 import writeConfigAlloy from '../utils/deploy_tools/configAlloy.js';
 import teardownInfrastructure from '../utils/deploy_tools/teardownInfrastructure.js';
 import acceptPeeringConnection from '../utils/deploy_tools/acceptPeeringConnection.js';
@@ -29,6 +28,7 @@ import {
   getStackOutputs,
   promptInstanceData,
 } from '../utils/deploy_tools/outputService.js';
+import selectSubnet from '../utils/deploy_tools/subnetService.js';
 
 const execAsync = promisify(exec);
 
@@ -47,35 +47,7 @@ const deployBackend = async () => {
     }
 
     const newVpcCidr = generateNonOverlappingCidr(peerVpcValidation.cidrBlock);
-    const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
-
-    if (subnets.length === 0) {
-      p(chalk.red('No subnets found in peer VPC'));
-      process.exit(1);
-    }
-
-    const subnetChoices = subnets.map((subnet) => ({
-      name: `${subnet.name} (${subnet.subnetId} - ${subnet.cidr})`,
-      value: subnet,
-    }));
-
-    const { selectedSubnet } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'selectedSubnet',
-        message: chalk.cyan(
-          'Select the subnet whose route table should receive the return route:'
-        ),
-        choices: subnetChoices,
-        pageSize: 15,
-      },
-    ]);
-
-    p(
-      chalk.green(
-        `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
-      )
-    );
+    const selectedSubnet = await selectSubnet(peerVpcId, region);
 
     const { confirmDeploy } = await inquirer.prompt([
       {

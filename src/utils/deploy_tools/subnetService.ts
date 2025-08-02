@@ -1,10 +1,11 @@
+import chalk from 'chalk';
+import { p } from '../shared';
 import {
   DescribeRouteTablesCommand,
   DescribeSubnetsCommand,
   EC2Client,
 } from '@aws-sdk/client-ec2';
-import chalk from 'chalk';
-import { p } from '../shared';
+import inquirer from 'inquirer';
 
 interface SubnetInfo {
   subnetId: string;
@@ -12,6 +13,44 @@ interface SubnetInfo {
   cidr: string;
   routeTableId: string;
 }
+
+interface PromptAnswers {
+  selectedSubnet: SubnetInfo;
+}
+
+const selectSubnet = async (peerVpcId: string, region: string) => {
+  const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
+
+  if (subnets.length === 0) {
+    p(chalk.red('No subnets found in peer VPC'));
+    process.exit(1);
+  }
+
+  const subnetChoices = subnets.map((subnet) => ({
+    name: `${subnet.name} (${subnet.subnetId} - ${subnet.cidr})`,
+    value: subnet,
+  }));
+
+  const { selectedSubnet } = await inquirer.prompt<PromptAnswers>([
+    {
+      type: 'list',
+      name: 'selectedSubnet',
+      message: chalk.cyan(
+        'Select the subnet whose route table should receive the return route:'
+      ),
+      choices: subnetChoices,
+      pageSize: 15,
+    },
+  ]);
+
+  p(
+    chalk.green(
+      `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
+    )
+  );
+
+  return selectedSubnet;
+};
 
 const getSubnetsWithRouteTables = async (
   vpcId: string,
@@ -74,4 +113,4 @@ const getSubnetsWithRouteTables = async (
   }
 };
 
-export default getSubnetsWithRouteTables;
+export default selectSubnet;
