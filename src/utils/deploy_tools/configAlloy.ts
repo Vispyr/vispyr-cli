@@ -101,7 +101,7 @@ prometheus.remote_write "gateway_collector" {
 
 otelcol.exporter.otlp "gateway_collector" {
   client {
-    endpoint = "http://${privateIp}:4317"
+    endpoint = "${privateIp}:4317"
     tls {
       insecure = true
       insecure_skip_verify = true

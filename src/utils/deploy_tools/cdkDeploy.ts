@@ -1,12 +1,10 @@
 import ora from 'ora';
-import { execAsync, styleLog } from '../shared';
-import chalk from 'chalk';
+import { execAsync, p } from '../shared';
 import { spawn } from 'child_process';
-
-const INFO = 'yellow';
+import chalk from 'chalk';
 
 export const bootstrap = async () => {
-  styleLog(INFO, '\nBootstrapping CDK (if needed)...');
+  p(chalk.yellow('\nBootstrapping CDK (if needed)...'));
   const bootstrapSpinner = ora('Running CDK bootstrap...').start();
   try {
     await execAsync('npx cdk bootstrap');
@@ -19,7 +17,7 @@ export const bootstrap = async () => {
 };
 
 export const deployInfrastructure = async () => {
-  styleLog(INFO, '\nDeploying secure infrastructure...');
+  p(chalk.yellow('\nDeploying secure infrastructure...'));
 
   try {
     const cdkDeploy = spawn(

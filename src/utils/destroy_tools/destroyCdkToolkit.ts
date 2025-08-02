@@ -6,19 +6,18 @@ import {
   ListStacksCommand,
 } from '@aws-sdk/client-cloudformation';
 import ora from 'ora';
-import { styleLog } from '../shared';
-
-const INFO = 'yellow';
+import { p } from '../shared';
+import chalk from 'chalk';
 
 const destroyCdkToolkit = async (
   region: string,
   stackName: string = 'CDKToolkit'
 ) => {
-  styleLog(INFO, '\nDestroying CDKToolkit...');
+  p(chalk.yellow('\nDestroying CDKToolkit...'));
   const otherCdkStacks = await checkForOtherCdkStacks(region);
 
   if (otherCdkStacks.length > 0) {
-    console.log(
+    p(
       `Skipping CDKToolkit deletion: Found ${
         otherCdkStacks.length
       } other CDK stack(s): ${otherCdkStacks.join(', ')}.`
@@ -36,18 +35,16 @@ const destroyCdkToolkit = async (
     const stack = describeStacksResponse.Stacks?.[0];
 
     if (stack?.EnableTerminationProtection) {
-      console.log(`Disabling termination protection for ${stackName}...\n`);
+      p(`Disabling termination protection for ${stackName}...\n`);
       const updateTerminationProtectionCommand =
         new UpdateTerminationProtectionCommand({
           EnableTerminationProtection: false,
           StackName: stackName,
         });
       await client.send(updateTerminationProtectionCommand);
-      console.log(`Termination protection disabled for ${stackName}.`);
+      p(`Termination protection disabled for ${stackName}.`);
     } else {
-      console.log(
-        `Termination protection is already disabled for ${stackName}.`
-      );
+      p(`Termination protection is already disabled for ${stackName}.`);
     }
 
     const cloudFormationStack = ora(
@@ -62,7 +59,7 @@ const destroyCdkToolkit = async (
       error.Code === 'ValidationError' &&
       error.message.includes('does not exist')
     ) {
-      console.log(`CloudFormation stack ${stackName} not found in ${region}.`);
+      p(`CloudFormation stack ${stackName} not found in ${region}.`);
     } else {
       console.error(`Error deleting stack ${stackName}:`, error);
     }

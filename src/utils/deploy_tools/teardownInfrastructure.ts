@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import { execAsync } from '../shared';
+import { execAsync, p } from '../shared';
 
 const teardownInfrastructure = async (): Promise<void> => {
   try {
-    console.log(chalk.yellow('\n🧹 Tearing down infrastructure...'));
+    p(chalk.yellow('\n🧹 Tearing down infrastructure...'));
     const destroySpinner = ora('Running CDK destroy...').start();
 
     await execAsync('npx cdk destroy --force');

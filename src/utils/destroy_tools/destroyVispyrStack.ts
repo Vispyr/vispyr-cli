@@ -1,12 +1,9 @@
 import { spawn } from 'child_process';
-import { styleLog } from '../shared';
+import { p } from '../shared';
 import chalk from 'chalk';
 
-const SUCCESS = 'green';
-const INFO = 'yellow';
-
 const destroyVispyrStack = async () => {
-  styleLog(INFO, '\nDestroying Vispyr stack...');
+  p(chalk.yellow('\nDestroying Vispyr stack...'));
 
   try {
     const cdkDestroy = spawn(
@@ -21,7 +18,7 @@ const destroyVispyrStack = async () => {
     await new Promise<void>((res, rej) => {
       cdkDestroy.on('close', (code) => {
         if (code === 0) {
-          styleLog(SUCCESS, 'Vispyr stack destroyed successfully');
+          p(chalk.green('Vispyr stack destroyed successfully'));
           res();
         } else {
           rej(new Error(`CDK destroy failed with code ${code}`));

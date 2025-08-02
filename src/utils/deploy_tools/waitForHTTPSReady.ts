@@ -9,11 +9,10 @@ export const waitForHTTPSReady = async (
   ).start();
 
   let attempts = 0;
-  const maxAttempts = 90; // 15 minutes with 10-second intervals
+  const maxAttempts = 90;
 
   while (attempts < maxAttempts) {
     try {
-      // Use curl to test HTTPS endpoint, accepting self-signed certificates
       const { stdout } = await execAsync(
         `curl -k -s -o /dev/null -w "%{http_code}" ${httpsEndpoint}/api/health || echo "000"`
       );
@@ -29,10 +28,9 @@ export const waitForHTTPSReady = async (
         .toString()
         .padStart(2, '0')} elapsed)`;
 
-      await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
+      await new Promise((resolve) => setTimeout(resolve, 10000));
       attempts++;
     } catch (error) {
-      // Continue trying even if curl fails
       await new Promise((resolve) => setTimeout(resolve, 10000));
       attempts++;
     }

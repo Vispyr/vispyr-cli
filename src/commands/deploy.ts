@@ -32,9 +32,6 @@ import {
 
 const execAsync = promisify(exec);
 
-const ERROR = 'red';
-const INFO = 'yellow';
-
 const deployBackend = async () => {
   try {
     p(chalk.blue.bold('\nVispyr Backend - Secure HTTPS Deployment\n'));
@@ -45,7 +42,7 @@ const deployBackend = async () => {
     const peerVpcValidation = await validatePeerVpc(peerVpcId, region);
 
     if (!peerVpcValidation.isValid || !peerVpcValidation.cidrBlock) {
-      p(ERROR, `Invalid or inaccessible peer VPC: ${peerVpcId}`);
+      p(chalk.red(`Invalid or inaccessible peer VPC: ${peerVpcId}`));
       process.exit(1);
     }
 
@@ -53,7 +50,7 @@ const deployBackend = async () => {
     const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
 
     if (subnets.length === 0) {
-      p(ERROR, 'No subnets found in peer VPC');
+      p(chalk.red('No subnets found in peer VPC'));
       process.exit(1);
     }
 
@@ -90,16 +87,16 @@ const deployBackend = async () => {
     ]);
 
     if (!confirmDeploy) {
-      p(INFO, 'Deployment cancelled');
+      p(chalk.yellow('Deployment cancelled'));
       return;
     }
 
     if (!hasCredentials()) {
-      p(INFO, 'AWS credentials not found. Starting init...');
+      p(chalk.yellow('AWS credentials not found. Starting init...'));
       await init();
     }
 
-    p(INFO, '\nGenerating CDK templates...');
+    p(chalk.yellow('\nGenerating CDK templates...'));
     const synthSpinner = ora('Running CDK Synth...').start();
     try {
       await execAsync('npx cdk synth');

@@ -1,10 +1,8 @@
 import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs';
-import { execAsync, styleLog } from '../shared';
+import { execAsync, p } from '../shared';
 import inquirer from 'inquirer';
-
-const INFO = 'yellow';
 
 interface DeploymentOutputs {
   instanceId?: string;
@@ -49,7 +47,7 @@ export const getStackOutputs = async (): Promise<DeploymentOutputs> => {
 };
 
 export const promptInstanceData = async (outputs: DeploymentOutputs) => {
-  styleLog(INFO, '\nCould not automatically retrieve instance details.');
+  p(chalk.yellow('\nCould not automatically retrieve instance details.'));
   const { instanceId, publicIp } = await inquirer.prompt([
     {
       type: 'input',

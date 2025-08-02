@@ -4,9 +4,7 @@ import {
   EC2Client,
 } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
-import { styleLog } from '../shared';
-
-const PROMPT = 'blue';
+import { p } from '../shared';
 
 interface SubnetInfo {
   subnetId: string;
@@ -19,7 +17,7 @@ const getSubnetsWithRouteTables = async (
   vpcId: string,
   region: string
 ): Promise<SubnetInfo[]> => {
-  styleLog(PROMPT, '\nRetrieving peer VPC subnet information...');
+  p(chalk.blue('\nRetrieving peer VPC subnet information...'));
   const ec2Client = new EC2Client({ region });
 
   try {

@@ -5,6 +5,7 @@ import {
 } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
 import ora from 'ora';
+import { p } from '../shared';
 
 interface AddedRoute {
   routeTableId: string;
@@ -50,7 +51,7 @@ export const addRouteToSubnet = async (
 export const cleanupAddedRoutes = async (region: string): Promise<void> => {
   if (addedRoutes.length === 0) return;
 
-  console.log(chalk.yellow('\n🧹 Cleaning up added routes...'));
+  p(chalk.yellow('\n🧹 Cleaning up added routes...'));
   const ec2Client = new EC2Client({ region });
 
   for (const route of addedRoutes) {

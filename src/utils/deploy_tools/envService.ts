@@ -1,9 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import { styleLog } from '../shared';
-
-const ERROR = 'red';
-const INFO = 'yellow';
+import { p } from '../shared';
+import chalk from 'chalk';
 
 const checkEnvFile = (): { hasEnv: boolean; peerVpcId?: string } => {
   const envPath = path.resolve(process.cwd(), '.env');
@@ -27,14 +25,14 @@ export const getPeerVpcId = () => {
   const { hasEnv, peerVpcId } = checkEnvFile();
 
   if (!hasEnv) {
-    styleLog(ERROR, '.env file not found.');
-    styleLog(INFO, 'Please create a .env file with PEER_VPC_ID=vpc-xxxxxxxxx');
+    p(chalk.red('.env file not found.'));
+    p(chalk.yellow('Please create a .env file with PEER_VPC_ID=vpc-xxxxxxxxx'));
     process.exit(1);
   }
 
   if (!peerVpcId) {
-    styleLog(ERROR, 'PEER_VPC_ID not found in .env file');
-    styleLog(INFO, 'Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file');
+    p(chalk.red('PEER_VPC_ID not found in .env file'));
+    p(chalk.yellow('Please add PEER_VPC_ID=vpc-xxxxxxxxx to your .env file'));
     process.exit(1);
   }
 

@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import path from 'path';
 import fs from 'fs';
+import { p } from '../shared';
 
 const cleanupVpcPeeringRoutes = async () => {
   try {
@@ -24,17 +25,15 @@ const cleanupVpcPeeringRoutes = async () => {
           process.env.AWS_REGION as string
         );
       } else {
-        console.log(
-          chalk.gray('No VPC peering connection details found in outputs')
-        );
+        p(chalk.gray('No VPC peering connection details found in outputs'));
       }
     } else {
-      console.log(
+      p(
         chalk.gray('No outputs.json found - skipping VPC peering route cleanup')
       );
     }
   } catch (error) {
-    console.log(
+    p(
       chalk.yellow(
         'Could not read outputs for VPC peering cleanup - continuing with teardown'
       )
@@ -98,7 +97,7 @@ const cleanupRoutes = async (
           routesRemoved++;
           routeSpinner.text = `Removed route ${route.DestinationCidrBlock} from route table ${routeTable.RouteTableId}`;
         } catch (routeError) {
-          console.log(
+          p(
             chalk.yellow(
               `Warning: Could not remove route ${route.DestinationCidrBlock} from ${routeTable.RouteTableId}: ${routeError}`
             )
@@ -118,7 +117,7 @@ const cleanupRoutes = async (
     routeSpinner.warn(
       'Could not clean up VPC peering routes - continuing with teardown'
     );
-    console.log(chalk.yellow(`VPC peering route cleanup warning: ${error}`));
+    p(chalk.yellow(`VPC peering route cleanup warning: ${error}`));
   }
 };
 

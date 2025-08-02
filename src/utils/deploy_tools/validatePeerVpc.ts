@@ -1,5 +1,6 @@
 import { DescribeVpcsCommand, EC2Client } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
+import { p } from '../shared';
 
 const validatePeerVpc = async (
   peerVpcId: string,
@@ -18,7 +19,7 @@ const validatePeerVpc = async (
       return { isValid: false };
     }
 
-    console.log(chalk.green(`Found peer VPC: ${peerVpcId} (${vpc.CidrBlock})`));
+    p(chalk.green(`Found peer VPC: ${peerVpcId} (${vpc.CidrBlock})`));
     return { isValid: true, cidrBlock: vpc.CidrBlock };
   } catch (error) {
     console.error(chalk.red(`Could not find VPC ${peerVpcId}:`, error));

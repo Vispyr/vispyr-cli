@@ -9,7 +9,7 @@ const waitForInstanceReady = async (
   const spinner = ora('Waiting for EC2 instance to be ready...').start();
 
   let attempts = 0;
-  const maxAttempts = 30; // 5 minutes with 10-second intervals
+  const maxAttempts = 30;
 
   while (attempts < maxAttempts) {
     try {
@@ -27,7 +27,7 @@ const waitForInstanceReady = async (
         return;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
+      await new Promise((resolve) => setTimeout(resolve, 10000));
       attempts++;
     } catch (error) {
       spinner.fail('Failed to check instance status');
