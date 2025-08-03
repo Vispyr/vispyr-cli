@@ -6,6 +6,7 @@ import {
   EC2Client,
 } from '@aws-sdk/client-ec2';
 import inquirer from 'inquirer';
+import { Region } from '../../types';
 
 interface SubnetInfo {
   subnetId: string;
@@ -18,7 +19,7 @@ interface PromptAnswers {
   selectedSubnet: SubnetInfo;
 }
 
-const selectSubnet = async (peerVpcId: string, region: string) => {
+const selectSubnet = async (peerVpcId: string, region: Region) => {
   const subnets = await getSubnetsWithRouteTables(peerVpcId, region);
 
   if (subnets.length === 0) {
@@ -54,7 +55,7 @@ const selectSubnet = async (peerVpcId: string, region: string) => {
 
 const getSubnetsWithRouteTables = async (
   vpcId: string,
-  region: string
+  region: Region
 ): Promise<SubnetInfo[]> => {
   p(chalk.blue('\nRetrieving peer VPC subnet information...'));
   const ec2Client = new EC2Client({ region });

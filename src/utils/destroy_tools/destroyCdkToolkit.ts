@@ -8,9 +8,10 @@ import {
 import ora from 'ora';
 import { p } from '../shared';
 import chalk from 'chalk';
+import { Region } from '../../types';
 
 const destroyCdkToolkit = async (
-  region: string,
+  region: Region,
   stackName: string = 'CDKToolkit'
 ) => {
   p(chalk.yellow('\nDestroying CDKToolkit...'));
@@ -67,7 +68,7 @@ const destroyCdkToolkit = async (
 };
 
 const checkForOtherCdkStacks = async (
-  region: string,
+  region: Region,
   excludeStacks: string[] = ['CDKToolkit', 'VispyrStack']
 ): Promise<string[]> => {
   const client = new CloudFormationClient({ region });

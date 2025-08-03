@@ -8,6 +8,7 @@ import ora from 'ora';
 import path from 'path';
 import fs from 'fs';
 import { p } from '../shared';
+import { Region } from '../../types';
 
 const cleanupVpcPeeringRoutes = async () => {
   try {
@@ -22,7 +23,7 @@ const cleanupVpcPeeringRoutes = async () => {
         await cleanupRoutes(
           process.env.PEER_VPC_ID as string,
           stackOutputs.PeeringConnectionId,
-          process.env.AWS_REGION as string
+          process.env.AWS_REGION as Region
         );
       } else {
         p(chalk.gray('No VPC peering connection details found in outputs'));
@@ -44,7 +45,7 @@ const cleanupVpcPeeringRoutes = async () => {
 const cleanupRoutes = async (
   peerVpcId: string,
   peeringConnectionId: string,
-  region: string
+  region: Region
 ): Promise<void> => {
   const routeSpinner = ora('Cleaning up VPC peering routes...').start();
 

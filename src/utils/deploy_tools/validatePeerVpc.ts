@@ -1,10 +1,11 @@
 import { DescribeVpcsCommand, EC2Client } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
 import { p } from '../shared';
+import { Region } from '../../types';
 
 const validatePeerVpc = async (
   peerVpcId: string,
-  region: string
+  region: Region
 ): Promise<{ isValid: boolean; cidrBlock?: string }> => {
   try {
     const ec2Client = new EC2Client({ region });

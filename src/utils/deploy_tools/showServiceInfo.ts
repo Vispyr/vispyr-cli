@@ -25,8 +25,8 @@ const showServiceInfo = (httpsEndpoint: string): void => {
     )
   );
   p(chalk.white('3. Log in to Grafana'));
-  p(chalk.white('   username:'), chalk.green('admin'));
-  p(chalk.white('   password:'), chalk.green('admin'));
+  p(chalk.white('username:'), chalk.green('admin'));
+  p(chalk.white('password:'), chalk.green('admin'));
 };
 
 export default showServiceInfo;

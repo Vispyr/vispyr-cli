@@ -6,6 +6,7 @@ import {
 import chalk from 'chalk';
 import ora from 'ora';
 import { p } from '../shared';
+import { Region } from '../../types';
 
 interface AddedRoute {
   routeTableId: string;
@@ -19,7 +20,7 @@ export const addRouteToSubnet = async (
   routeTableId: string,
   destinationCidr: string,
   peeringConnectionId: string,
-  region: string
+  region: Region
 ): Promise<void> => {
   try {
     const ec2Client = new EC2Client({ region });
@@ -48,7 +49,7 @@ export const addRouteToSubnet = async (
   }
 };
 
-export const cleanupAddedRoutes = async (region: string): Promise<void> => {
+export const cleanupAddedRoutes = async (region: Region): Promise<void> => {
   if (addedRoutes.length === 0) return;
 
   p(chalk.yellow('\n🧹 Cleaning up added routes...'));

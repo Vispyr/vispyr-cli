@@ -10,6 +10,7 @@ import cleanupEIPs from '../utils/destroy_tools/cleanupEIPs.js';
 import destroyS3Bucket from '../utils/destroy_tools/destroyS3Bucket.js';
 import cleanupLocalFiles from '../utils/destroy_tools/cleanupLocalFiles.js';
 import findEIPs from '../utils/destroy_tools/findEIPs.js';
+import { Region } from '../types.js';
 
 const execAsync = promisify(exec);
 
@@ -37,7 +38,7 @@ const destroyBackend = async () => {
     await cleanupVpcPeeringRoutes();
     await destroyVispyrStack();
     await cleanupEIPs();
-    await destroyCdkToolkit(process.env.AWS_REGION as string);
+    await destroyCdkToolkit(process.env.AWS_REGION as Region);
     await destroyS3Bucket();
     cleanupLocalFiles();
 

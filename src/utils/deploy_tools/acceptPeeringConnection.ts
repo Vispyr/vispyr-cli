@@ -4,10 +4,11 @@ import {
 } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
 import ora from 'ora';
+import { Region } from '../../types';
 
 const acceptPeeringConnection = async (
   peeringConnectionId: string,
-  region: string
+  region: Region
 ): Promise<void> => {
   try {
     const ec2Client = new EC2Client({ region });

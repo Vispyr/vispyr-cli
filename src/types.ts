@@ -1,4 +1,4 @@
-type Region =
+export type Region =
   | 'us-east-1'
   | 'us-east-2'
   | 'us-west-1'

@@ -7,8 +7,6 @@ import init from './init.js';
 import { hasCredentials } from '../utils/config.js';
 
 import { acknowledgeNotice, p } from '../utils/shared.js';
-import { getPeerVpcId } from '../utils/deploy_tools/envService.js';
-import validatePeerVpc from '../utils/deploy_tools/validatePeerVpc.js';
 import generateNonOverlappingCidr from '../utils/deploy_tools/generateNonOverlappingCidr.js';
 import writeConfigAlloy from '../utils/deploy_tools/configAlloy.js';
 import teardownInfrastructure from '../utils/deploy_tools/teardownInfrastructure.js';
@@ -29,6 +27,8 @@ import {
   promptInstanceData,
 } from '../utils/deploy_tools/outputService.js';
 import selectSubnet from '../utils/deploy_tools/subnetService.js';
+import getPeerVpcId from '../utils/deploy_tools/peerVpcService.js';
+import { Region } from '../types.js';
 
 const execAsync = promisify(exec);
 
@@ -36,17 +36,11 @@ const deployBackend = async () => {
   try {
     p(chalk.blue.bold('\nVispyr Backend - Secure HTTPS Deployment\n'));
 
-    const peerVpcId = getPeerVpcId();
+    const region = process.env.AWS_REGION as Region;
 
-    const region = process.env.AWS_REGION as string;
-    const peerVpcValidation = await validatePeerVpc(peerVpcId, region);
+    const { peerVpcId, cidrBlock } = await getPeerVpcId(region);
 
-    if (!peerVpcValidation.isValid || !peerVpcValidation.cidrBlock) {
-      p(chalk.red(`Invalid or inaccessible peer VPC: ${peerVpcId}`));
-      process.exit(1);
-    }
-
-    const newVpcCidr = generateNonOverlappingCidr(peerVpcValidation.cidrBlock);
+    const newVpcCidr = generateNonOverlappingCidr(cidrBlock);
     const selectedSubnet = await selectSubnet(peerVpcId, region);
 
     const { confirmDeploy } = await inquirer.prompt([
@@ -133,7 +127,7 @@ const deployBackend = async () => {
     if (outputs.instanceId) {
       await waitForInstanceReady(
         outputs.instanceId,
-        process.env.AWS_REGION as string
+        process.env.AWS_REGION as Region
       );
     }
 
@@ -150,8 +144,7 @@ const deployBackend = async () => {
   } catch (err) {
     console.error(chalk.red('\nAn error occurred:'), err);
 
-    const region =
-      process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1';
+    const region = process.env.AWS_REGION as Region;
     await cleanupAddedRoutes(region);
 
     process.exit(1);
