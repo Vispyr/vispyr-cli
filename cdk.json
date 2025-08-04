@@ -1,4 +1,3 @@
 {
-  "app": "npx tsx cdk/bin/cdk.ts",
-  "outputsFile": "outputs.json"
+  "app": "npx tsx cdk/bin/cdk.ts"
 }

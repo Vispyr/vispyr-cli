@@ -29,12 +29,7 @@ package-lock.json
 cdk.context.json
 .aws
 cdk.out
-outputs.json
-backend-outputs.json
-demo-outputs.json
 
 # CLI Specific
 config.alloy
 
-# Delete later
-.important_data

@@ -79,7 +79,7 @@ const vispyrBackendCommands = [
 
   // Clone and start application
   'cd /home/ec2-user',
-  `git clone https://${process.env.PERSONAL_ACCESS_TOKEN}@github.com/Vispyr/vispyr-backend.git`,
+  `git clone https://github.com/Vispyr/vispyr-backend.git`,
   'chown -R ec2-user:ec2-user vispyr-backend',
   'cd vispyr-backend',
 

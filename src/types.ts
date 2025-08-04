@@ -1,4 +1,4 @@
-type Region =
+export type Region =
   | 'us-east-1'
   | 'us-east-2'
   | 'us-west-1'
@@ -31,6 +31,13 @@ type Region =
   | 'me-south-1'
   | 'me-central-1'
   | 'sa-east-1';
+
+export interface SubnetInfo {
+  subnetId: string;
+  name: string;
+  cidr: string;
+  routeTableId: string;
+}
 
 export interface AWSConfigType {
   aws_access_key_id: string;

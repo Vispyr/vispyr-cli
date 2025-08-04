@@ -7,14 +7,21 @@ import {
 } from '@aws-sdk/client-cloudformation';
 import ora from 'ora';
 
-async function destroyCdkToolkit(
-  region: string,
-  stackName: string = 'CDKToolkit'
-) {
+import { p, sleep } from '../shared.js';
+import { Region } from '../../types.js';
+
+const destroyCdkToolkit = async (stackName: string = 'CDKToolkit') => {
+  const region = process.env.AWS_REGION as Region;
+
+  const cloudFormationStack = ora(
+    `Deleting CloudFormation stack: ${stackName} in ${region}...`
+  ).start();
+  await sleep(1000);
+
   const otherCdkStacks = await checkForOtherCdkStacks(region);
 
   if (otherCdkStacks.length > 0) {
-    console.log(
+    p(
       `Skipping CDKToolkit deletion: Found ${
         otherCdkStacks.length
       } other CDK stack(s): ${otherCdkStacks.join(', ')}.`
@@ -32,23 +39,15 @@ async function destroyCdkToolkit(
     const stack = describeStacksResponse.Stacks?.[0];
 
     if (stack?.EnableTerminationProtection) {
-      console.log(`Disabling termination protection for ${stackName}...\n`);
+      cloudFormationStack.text = `Disabling termination protection for ${stackName}...\n`;
       const updateTerminationProtectionCommand =
         new UpdateTerminationProtectionCommand({
           EnableTerminationProtection: false,
           StackName: stackName,
         });
       await client.send(updateTerminationProtectionCommand);
-      console.log(`Termination protection disabled for ${stackName}.`);
-    } else {
-      console.log(
-        `Termination protection is already disabled for ${stackName}.`
-      );
     }
 
-    const cloudFormationStack = ora(
-      `Deleting CloudFormation stack: ${stackName} in ${region}...`
-    ).start();
     const deleteStackCommand = new DeleteStackCommand({ StackName: stackName });
 
     await client.send(deleteStackCommand);
@@ -58,15 +57,15 @@ async function destroyCdkToolkit(
       error.Code === 'ValidationError' &&
       error.message.includes('does not exist')
     ) {
-      console.log(`CloudFormation stack ${stackName} not found in ${region}.`);
+      p(`CloudFormation stack ${stackName} not found in ${region}.`);
     } else {
       console.error(`Error deleting stack ${stackName}:`, error);
     }
   }
-}
+};
 
 const checkForOtherCdkStacks = async (
-  region: string,
+  region: Region,
   excludeStacks: string[] = ['CDKToolkit', 'VispyrStack']
 ): Promise<string[]> => {
   const client = new CloudFormationClient({ region });
