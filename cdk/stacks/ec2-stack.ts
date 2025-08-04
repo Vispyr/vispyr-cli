@@ -1,4 +1,4 @@
-import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
+import { Stack, StackProps, Fn } from 'aws-cdk-lib';
 import {
   Instance,
   InstanceType,
@@ -15,6 +15,7 @@ import {
   IpAddresses,
 } from 'aws-cdk-lib/aws-ec2';
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
+import { StringParameter, ParameterTier } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { generateUserData } from '../utils/generateUserData';
 import vispyrBackendCommands from '../user_commands/vispyrBackendCommands';
@@ -127,37 +128,80 @@ export class VispyrBackend extends Stack {
       },
     });
 
-    new CfnEIP(this, 'VispyrEIPAssociation', {
+    const eip = new CfnEIP(this, 'VispyrEIPAssociation', {
       domain: 'vpc',
       instanceId: instance.instanceId,
     });
 
-    new CfnOutput(this, 'InstanceId', {
-      value: instance.instanceId,
-      exportName: 'VispyrInstanceId',
-      description: 'Instance ID of the Vispyr EC2 instance',
+    this.storeDeploymentParameters(instance, peeringConnection, eip, vpc);
+  }
+
+  private storeDeploymentParameters(
+    instance: Instance,
+    peeringConnection: CfnVPCPeeringConnection,
+    eip: CfnEIP,
+    vpc: Vpc
+  ) {
+    const parameterPrefix = '/vispyr/backend';
+
+    new StringParameter(this, 'InstanceIdParameter', {
+      parameterName: `${parameterPrefix}/instance-id`,
+      stringValue: instance.instanceId,
+      description: 'Vispyr Backend EC2 Instance ID',
+      tier: ParameterTier.STANDARD,
     });
 
-    new CfnOutput(this, 'InstancePublicIP', {
-      value: instance.instancePublicIp,
-      exportName: 'VispyrInstancePublicIP',
-      description: 'Public IP of the Vispyr EC2 instance',
+    new StringParameter(this, 'PublicIPParameter', {
+      parameterName: `${parameterPrefix}/public-ip`,
+      stringValue: eip.ref,
+      description: 'Vispyr Backend Public IP Address',
+      tier: ParameterTier.STANDARD,
     });
 
-    new CfnOutput(this, 'HTTPSEndpoint', {
-      value: `https://${instance.instancePublicDnsName}`,
-      exportName: 'VispyrHTTPSEndpoint',
-      description: 'HTTPS endpoint for Grafana access',
+    new StringParameter(this, 'PrivateIPParameter', {
+      parameterName: `${parameterPrefix}/private-ip`,
+      stringValue: instance.instancePrivateIp,
+      description: 'Vispyr Backend Private IP Address',
+      tier: ParameterTier.STANDARD,
     });
 
-    new CfnOutput(this, 'InstancePrivateIp', {
-      value: instance.instancePrivateIp,
-      description: 'Private IP of the EC2 instance',
+    const region = process.env.AWS_REGION || this.region;
+    const computeDomain =
+      region === 'us-east-1'
+        ? 'compute-1.amazonaws.com'
+        : `${region}.compute.amazonaws.com`;
+
+    const httpsEndpoint = Fn.sub('https://ec2-${EipWithDashes}.${Domain}', {
+      EipWithDashes: Fn.join('-', Fn.split('.', eip.ref)),
+      Domain: computeDomain,
     });
 
-    new CfnOutput(this, 'PeeringConnectionId', {
-      value: peeringConnection.attrId,
+    new StringParameter(this, 'HttpsEndpointParameter', {
+      parameterName: `${parameterPrefix}/https-endpoint`,
+      stringValue: httpsEndpoint,
+      description: 'Vispyr Backend HTTPS Endpoint URL',
+      tier: ParameterTier.STANDARD,
+    });
+
+    new StringParameter(this, 'PeeringConnectionIdParameter', {
+      parameterName: `${parameterPrefix}/peering-connection-id`,
+      stringValue: peeringConnection.attrId,
       description: 'VPC Peering Connection ID',
+      tier: ParameterTier.STANDARD,
+    });
+
+    new StringParameter(this, 'VpcIdParameter', {
+      parameterName: `${parameterPrefix}/vpc-id`,
+      stringValue: vpc.vpcId,
+      description: 'Vispyr Backend VPC ID',
+      tier: ParameterTier.STANDARD,
+    });
+
+    new StringParameter(this, 'DeploymentTimestampParameter', {
+      parameterName: `${parameterPrefix}/deployment-timestamp`,
+      stringValue: new Date().toISOString(),
+      description: 'Timestamp of last deployment',
+      tier: ParameterTier.STANDARD,
     });
   }
 

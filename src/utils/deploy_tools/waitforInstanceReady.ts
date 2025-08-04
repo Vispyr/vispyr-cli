@@ -1,6 +1,7 @@
 import { DescribeInstancesCommand, EC2Client } from '@aws-sdk/client-ec2';
 import ora from 'ora';
-import { Region } from '../../types';
+import { Region } from '../../types.js';
+import { sleep } from '../shared.js';
 
 const waitForInstanceReady = async (
   instanceId: string,
@@ -8,6 +9,7 @@ const waitForInstanceReady = async (
 ): Promise<void> => {
   const ec2Client = new EC2Client({ region });
   const spinner = ora('Waiting for EC2 instance to be ready...').start();
+  await sleep(1000);
 
   let attempts = 0;
   const maxAttempts = 30;

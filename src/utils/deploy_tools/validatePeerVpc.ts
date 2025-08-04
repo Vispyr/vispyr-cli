@@ -1,7 +1,7 @@
 import { DescribeVpcsCommand, EC2Client } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
-import { p } from '../shared';
-import { Region } from '../../types';
+import { p } from '../shared.js';
+import { Region } from '../../types.js';
 
 const validatePeerVpc = async (
   peerVpcId: string,

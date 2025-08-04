@@ -1,5 +1,5 @@
 import ora from 'ora';
-import { execAsync } from '../shared';
+import { execAsync } from '../shared.js';
 
 export const waitForHTTPSReady = async (
   httpsEndpoint: string

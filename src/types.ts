@@ -32,6 +32,13 @@ export type Region =
   | 'me-central-1'
   | 'sa-east-1';
 
+export interface SubnetInfo {
+  subnetId: string;
+  name: string;
+  cidr: string;
+  routeTableId: string;
+}
+
 export interface AWSConfigType {
   aws_access_key_id: string;
   aws_secret_access_key: string;

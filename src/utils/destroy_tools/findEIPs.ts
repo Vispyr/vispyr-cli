@@ -1,8 +1,11 @@
 import { DescribeAddressesCommand, EC2Client } from '@aws-sdk/client-ec2';
 import ora from 'ora';
+import { sleep } from '../shared.js';
 
 const findEIPs = async () => {
   const eipSpinner = ora('Checking for Elastic IPs...').start();
+  await sleep(1000);
+
   try {
     const ec2 = new EC2Client({ region: process.env.AWS_REGION });
     const { Addresses } = await ec2.send(new DescribeAddressesCommand({}));

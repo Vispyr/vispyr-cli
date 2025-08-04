@@ -5,8 +5,9 @@ import {
 } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
 import ora from 'ora';
-import { p } from '../shared';
-import { Region } from '../../types';
+
+import { p, sleep } from '../shared.js';
+import { Region } from '../../types.js';
 
 interface AddedRoute {
   routeTableId: string;
@@ -27,6 +28,7 @@ export const addRouteToSubnet = async (
     const spinner = ora(
       `Adding route to route table ${routeTableId}...`
     ).start();
+    await sleep(1000);
 
     await ec2Client.send(
       new CreateRouteCommand({

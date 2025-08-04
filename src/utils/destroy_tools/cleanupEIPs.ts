@@ -4,11 +4,14 @@ import {
   ReleaseAddressCommand,
 } from '@aws-sdk/client-ec2';
 import ora from 'ora';
+import { sleep } from '../shared.js';
 
 const cleanupEIPs = async () => {
   const eipCleanupSpinner = ora(
     'Cleaning up any remaining Elastic IPs...'
   ).start();
+  await sleep(1000);
+
   try {
     const ec2 = new EC2Client({ region: process.env.AWS_REGION });
     const { Addresses } = await ec2.send(new DescribeAddressesCommand({}));

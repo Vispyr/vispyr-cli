@@ -6,15 +6,18 @@ import {
   ListStacksCommand,
 } from '@aws-sdk/client-cloudformation';
 import ora from 'ora';
-import { p } from '../shared';
-import chalk from 'chalk';
-import { Region } from '../../types';
 
-const destroyCdkToolkit = async (
-  region: Region,
-  stackName: string = 'CDKToolkit'
-) => {
-  p(chalk.yellow('\nDestroying CDKToolkit...'));
+import { p, sleep } from '../shared.js';
+import { Region } from '../../types.js';
+
+const destroyCdkToolkit = async (stackName: string = 'CDKToolkit') => {
+  const region = process.env.AWS_REGION as Region;
+
+  const cloudFormationStack = ora(
+    `Deleting CloudFormation stack: ${stackName} in ${region}...`
+  ).start();
+  await sleep(1000);
+
   const otherCdkStacks = await checkForOtherCdkStacks(region);
 
   if (otherCdkStacks.length > 0) {
@@ -36,21 +39,15 @@ const destroyCdkToolkit = async (
     const stack = describeStacksResponse.Stacks?.[0];
 
     if (stack?.EnableTerminationProtection) {
-      p(`Disabling termination protection for ${stackName}...\n`);
+      cloudFormationStack.text = `Disabling termination protection for ${stackName}...\n`;
       const updateTerminationProtectionCommand =
         new UpdateTerminationProtectionCommand({
           EnableTerminationProtection: false,
           StackName: stackName,
         });
       await client.send(updateTerminationProtectionCommand);
-      p(`Termination protection disabled for ${stackName}.`);
-    } else {
-      p(`Termination protection is already disabled for ${stackName}.`);
     }
 
-    const cloudFormationStack = ora(
-      `Deleting CloudFormation stack: ${stackName} in ${region}...`
-    ).start();
     const deleteStackCommand = new DeleteStackCommand({ StackName: stackName });
 
     await client.send(deleteStackCommand);

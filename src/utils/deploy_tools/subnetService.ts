@@ -1,19 +1,12 @@
 import chalk from 'chalk';
-import { p } from '../shared';
+import { p } from '../shared.js';
 import {
   DescribeRouteTablesCommand,
   DescribeSubnetsCommand,
   EC2Client,
 } from '@aws-sdk/client-ec2';
 import inquirer from 'inquirer';
-import { Region } from '../../types';
-
-interface SubnetInfo {
-  subnetId: string;
-  name: string;
-  cidr: string;
-  routeTableId: string;
-}
+import { Region, SubnetInfo } from '../../types.js';
 
 interface PromptAnswers {
   selectedSubnet: SubnetInfo;
@@ -37,7 +30,7 @@ const selectSubnet = async (peerVpcId: string, region: Region) => {
       type: 'list',
       name: 'selectedSubnet',
       message: chalk.cyan(
-        'Select the subnet whose route table should receive the return route:'
+        'Select your VPC subnet that will connect to Vispyr Backend:'
       ),
       choices: subnetChoices,
       pageSize: 15,
@@ -57,7 +50,6 @@ const getSubnetsWithRouteTables = async (
   vpcId: string,
   region: Region
 ): Promise<SubnetInfo[]> => {
-  p(chalk.blue('\nRetrieving peer VPC subnet information...'));
   const ec2Client = new EC2Client({ region });
 
   try {

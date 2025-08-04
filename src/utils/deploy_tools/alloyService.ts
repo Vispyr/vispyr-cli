@@ -1,12 +1,42 @@
 import ora from 'ora';
 import path from 'path';
 import fs from 'fs';
+import chalk from 'chalk';
+import { Region } from '../../types.js';
+import { p, sleep } from '../shared.js';
+import { cleanupAddedRoutes } from './routingService.js';
+import teardownInfrastructure from './teardownInfrastructure.js';
 
-const writeConfigAlloy = async (privateIp: string): Promise<void> => {
+const generateConfigAlloy = async (privateIp: string, region: Region) => {
+  if (privateIp) {
+    try {
+      await writeConfigFile(privateIp);
+    } catch (error) {
+      console.error(chalk.red('Failed to create config.alloy file:'), error);
+      p(
+        chalk.yellow(
+          'Cleaning up infrastructure due to config.alloy failure...'
+        )
+      );
+      await cleanupAddedRoutes(region);
+      await teardownInfrastructure();
+      process.exit(1);
+    }
+  } else {
+    console.error(chalk.red('Private IP not found in deployment outputs'));
+    p(chalk.yellow('Cleaning up infrastructure due to missing private IP...'));
+    await cleanupAddedRoutes(region);
+    await teardownInfrastructure();
+    process.exit(1);
+  }
+};
+
+const writeConfigFile = async (privateIp: string): Promise<void> => {
   try {
-    const spinner = ora('Generating config.alloy file...').start();
+    const spinner = ora('Generating Alloy configuration file...').start();
+    await sleep(1000);
 
-    const configContent = generateConfigAlloy(privateIp);
+    const configContent = configAlloy(privateIp);
     const configPath = path.resolve(
       process.cwd(),
       'vispyr_agent',
@@ -20,9 +50,7 @@ const writeConfigAlloy = async (privateIp: string): Promise<void> => {
 
     fs.writeFileSync(configPath, configContent, 'utf8');
 
-    spinner.succeed(
-      `config.alloy created at ${configPath} with private IP: ${privateIp}`
-    );
+    spinner.succeed(`Alloy configuration file created at: ${configPath}`);
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to create config.alloy file: ${error.message}`);
@@ -32,7 +60,7 @@ const writeConfigAlloy = async (privateIp: string): Promise<void> => {
   }
 };
 
-const generateConfigAlloy = (privateIp: string): string => {
+const configAlloy = (privateIp: string): string => {
   return `// Receivers
 otelcol.receiver.otlp "default" {
   grpc {
@@ -120,4 +148,4 @@ livedebugging {
 }`;
 };
 
-export default writeConfigAlloy;
+export default generateConfigAlloy;

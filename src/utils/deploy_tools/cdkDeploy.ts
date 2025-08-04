@@ -1,11 +1,25 @@
 import ora from 'ora';
-import { execAsync, p } from '../shared';
+import { execAsync, p } from '../shared.js';
 import { spawn } from 'child_process';
 import chalk from 'chalk';
 
+export const runCdkSynth = async () => {
+  p();
+  const synthSpinner = ora('Running CDK Synth...').start();
+
+  try {
+    await execAsync('npx cdk synth');
+    synthSpinner.succeed('CDK templates successfully created');
+  } catch (error) {
+    synthSpinner.fail('CDK Synth failed');
+    console.error(chalk.red('Error:'), error);
+    process.exit(1);
+  }
+};
+
 export const bootstrap = async () => {
-  p(chalk.yellow('\nBootstrapping CDK (if needed)...'));
   const bootstrapSpinner = ora('Running CDK bootstrap...').start();
+
   try {
     await execAsync('npx cdk bootstrap');
     bootstrapSpinner.succeed('CDK bootstrapped successfully');
@@ -17,19 +31,12 @@ export const bootstrap = async () => {
 };
 
 export const deployInfrastructure = async () => {
-  p(chalk.yellow('\nDeploying secure infrastructure...'));
+  p(chalk.yellow('\nDeploying Vispyr infrastructure...'));
 
   try {
     const cdkDeploy = spawn(
       'npx',
-      [
-        'cdk',
-        'deploy',
-        '--require-approval',
-        'never',
-        '--outputs-file',
-        'outputs.json',
-      ],
+      ['cdk', 'deploy', '--require-approval', 'never'],
       {
         stdio: 'inherit',
         env: { ...process.env },

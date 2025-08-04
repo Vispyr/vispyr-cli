@@ -1,46 +1,33 @@
 import chalk from 'chalk';
-import { exec } from 'child_process';
-import inquirer from 'inquirer';
-import { promisify } from 'util';
 import destroyCdkToolkit from '../utils/destroy_tools/destroyCdkToolkit.js';
-import { p } from '../utils/shared.js';
 import cleanupVpcPeeringRoutes from '../utils/destroy_tools/cleanupVpcPeeringRoutes.js';
 import destroyVispyrStack from '../utils/destroy_tools/destroyVispyrStack.js';
 import cleanupEIPs from '../utils/destroy_tools/cleanupEIPs.js';
 import destroyS3Bucket from '../utils/destroy_tools/destroyS3Bucket.js';
 import cleanupLocalFiles from '../utils/destroy_tools/cleanupLocalFiles.js';
 import findEIPs from '../utils/destroy_tools/findEIPs.js';
-import { Region } from '../types.js';
-
-const execAsync = promisify(exec);
+import confirmDestroy from '../utils/destroy_tools/confirmDestroy.js';
+import { VispyrSSMManager } from '../utils/ssmService.js';
+import { acknowledgeNotice, p } from '../utils/shared.js';
 
 const destroyBackend = async () => {
+  const ssmManager = new VispyrSSMManager();
   try {
     p(chalk.blue.bold('\nVispyr Backend - Complete Teardown\n'));
 
-    const { confirmTeardown } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'confirmTeardown',
-        message:
-          'This will delete the Vispyr EC2 instance, VPC, NAT Gateway, Elastic IP, CDKToolkit stack, and bootstrap S3 bucket. Continue?',
-        default: false,
-      },
-    ]);
+    await confirmDestroy();
 
-    if (!confirmTeardown) {
-      p(chalk.yellow('Teardown cancelled'));
-      return;
-    }
+    const params = await ssmManager.getDeploymentParameters();
 
-    await execAsync('npx cdk acknowledge 34892');
+    await acknowledgeNotice();
     await findEIPs();
-    await cleanupVpcPeeringRoutes();
+    await cleanupVpcPeeringRoutes(params.peeringConnectionId);
     await destroyVispyrStack();
     await cleanupEIPs();
-    await destroyCdkToolkit(process.env.AWS_REGION as Region);
+    await destroyCdkToolkit();
     await destroyS3Bucket();
-    cleanupLocalFiles();
+    await ssmManager.deleteAllParameters();
+    await cleanupLocalFiles();
 
     p(chalk.green.bold('\nComplete teardown finished!'));
   } catch (err) {

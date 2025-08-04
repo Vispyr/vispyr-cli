@@ -5,38 +5,24 @@ import {
 } from '@aws-sdk/client-ec2';
 import chalk from 'chalk';
 import ora from 'ora';
-import path from 'path';
-import fs from 'fs';
-import { p } from '../shared';
-import { Region } from '../../types';
+import { p, sleep } from '../shared.js';
+import { Region } from '../../types.js';
 
-const cleanupVpcPeeringRoutes = async () => {
+const cleanupVpcPeeringRoutes = async (peeringConnectionId: string) => {
   try {
-    const outputsPath = path.resolve(process.cwd(), 'outputs.json');
-
-    if (fs.existsSync(outputsPath)) {
-      const outputs = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
-      const stackName = Object.keys(outputs)[0];
-      const stackOutputs = outputs[stackName];
-
-      if (process.env.PEER_VPC_ID && stackOutputs.PeeringConnectionId) {
-        await cleanupRoutes(
-          process.env.PEER_VPC_ID as string,
-          stackOutputs.PeeringConnectionId,
-          process.env.AWS_REGION as Region
-        );
-      } else {
-        p(chalk.gray('No VPC peering connection details found in outputs'));
-      }
-    } else {
-      p(
-        chalk.gray('No outputs.json found - skipping VPC peering route cleanup')
+    if (process.env.PEER_VPC_ID && peeringConnectionId) {
+      await cleanupRoutes(
+        process.env.PEER_VPC_ID as string,
+        peeringConnectionId,
+        process.env.AWS_REGION as Region
       );
+    } else {
+      p(chalk.gray('No VPC peering connection details found'));
     }
   } catch (error) {
     p(
       chalk.yellow(
-        'Could not read outputs for VPC peering cleanup - continuing with teardown'
+        'Could not determine parameters for VPC peering cleanup - continuing with teardown'
       )
     );
   }
@@ -48,6 +34,7 @@ const cleanupRoutes = async (
   region: Region
 ): Promise<void> => {
   const routeSpinner = ora('Cleaning up VPC peering routes...').start();
+  await sleep(1000);
 
   try {
     const ec2 = new EC2Client({ region });

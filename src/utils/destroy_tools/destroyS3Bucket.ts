@@ -6,9 +6,11 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import ora from 'ora';
+import { sleep } from '../shared.js';
 
 const destroyS3Bucket = async () => {
   const bucketSpinner = ora('Searching for CDK bootstrap S3 bucket...').start();
+  await sleep(1000);
 
   const s3 = new S3Client({});
 
