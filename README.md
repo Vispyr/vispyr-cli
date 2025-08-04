@@ -1,6 +1,6 @@
 # To run the CLI
 
-1. Initial setup
+## Initial setup
 
 Include a `.env` file in the CLI's root directory with these fields
 
@@ -15,18 +15,16 @@ PEER_VPC_ID
 - `AWS_REGION` is your desired region to deploy
 - `PEER_VPC_ID` is the VPC ID of your desired app to instrument
 
-Be sure the app you wish to instrument is in a Public Subnet of a VPC.
-
 Navigate to the CLI's root directory and run 
 
 ```
 npm install
 ```
 
-2. Deploy Backend
+## Infrastructure Deployment
 
 ```
-npm start -- deploy
+npm build && npm start -- deploy
 ```
 
 This will walk you through a series of steps:
@@ -38,7 +36,7 @@ This process usually takes between 5-10 minutes.
 
 You will be provided the Grafana link and the `vispyr_agent` file. Follow the `Next Steps` instructions.
 
-3. Destroy Everything
+## Infrastructure Teardown
 
 This will tear down the entire Vispyr Backend, including:
 - VispyrStack (CloudFormation)
@@ -50,7 +48,7 @@ This will tear down the entire Vispyr Backend, including:
 - Local files created by the CLI
 
 ```
-npm start -- destroy-backend
+npm start -- destroy
 ```
 
 Follow the prompts, then wait for this process to finish. Usually takes 5-10 minutes.

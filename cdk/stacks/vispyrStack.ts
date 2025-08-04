@@ -17,8 +17,8 @@ import {
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { StringParameter, ParameterTier } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { generateUserData } from '../utils/generateUserData';
-import vispyrBackendCommands from '../user_commands/vispyrBackendCommands';
+import { generateUserData } from '../utils/generateUserData.js';
+import vispyrBackendCommands from '../user_commands/vispyrBackendCommands.js';
 
 interface VispyrBackendProps extends StackProps {
   peerVpcId: string;

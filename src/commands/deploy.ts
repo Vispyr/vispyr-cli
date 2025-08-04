@@ -37,7 +37,7 @@ const deployBackend = async () => {
     const ssmManager = new VispyrSSMManager();
     const params = await ssmManager.getDeploymentParameters();
 
-    generateConfigAlloy(params.privateIp, region);
+    await generateConfigAlloy(params.privateIp, region);
     await verifyConnection(params, region, selectedSubnet, newVpcCidr);
 
     showBackendInfo(params.httpsEndpoint, params.publicIp);
