@@ -24,7 +24,7 @@ npm install
 ## Infrastructure Deployment
 
 ```
-npm build && npm start -- deploy
+npm run build && npm start -- deploy
 ```
 
 This will walk you through a series of steps:
