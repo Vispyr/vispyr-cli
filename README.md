@@ -19,7 +19,7 @@ Required:
 - `PEER_VPC_ID` is the VPC ID of your desired app to instrument
 
 Optional:
-- `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, then the CLI will default to a self-signed certificate.
+- `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, then the CLI will default to a self-signed certificate. The domain should follow the structure `example.com` and the email can be any valid email, such as `example@gmail.com`.
 
 Navigate to the CLI's root directory and run 
 
