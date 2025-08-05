@@ -22,13 +22,15 @@ import vispyrBackendCommands from '../user_commands/vispyrBackendCommands.js';
 
 interface VispyrBackendProps extends StackProps {
   peerVpcId: string;
+  domain?: string;
+  email?: string;
 }
 
 export class VispyrBackend extends Stack {
   constructor(scope: Construct, id: string, props: VispyrBackendProps) {
     super(scope, id, props);
 
-    const { peerVpcId } = props;
+    const { peerVpcId, domain, email } = props;
 
     if (!peerVpcId.match(/^vpc-[a-z0-9]{8,17}$/)) {
       throw new Error(
@@ -91,6 +93,12 @@ export class VispyrBackend extends Stack {
       'HTTPS access to Grafana'
     );
 
+    securityGroup.addIngressRule(
+      Peer.anyIpv4(),
+      Port.tcp(80),
+      'HTTP access for Letss Encrypt validation'
+    );
+
     securityGroup.addIngressRule(Peer.anyIpv4(), Port.tcp(22), 'SSH access');
 
     const observabilityPorts = [
@@ -114,7 +122,7 @@ export class VispyrBackend extends Stack {
       ],
     });
 
-    const userData = generateUserData(vispyrBackendCommands);
+    const userData = generateUserData(vispyrBackendCommands(domain, email));
 
     const instance = new Instance(this, 'VispyrBackend', {
       vpc,

@@ -9,6 +9,8 @@ const main = async () => {
     const account = process.env.CDK_DEFAULT_ACCOUNT;
     const region = process.env.CDK_DEFAULT_REGION;
     const peerVpcId = process.env.PEER_VPC_ID;
+    const domain = process.env.VISPYR_DOMAIN;
+    const email = process.env.VISPYR_EMAIL;
 
     if (!peerVpcId) {
       console.error('PEER_VPC_ID is required but not found in .env file');
@@ -25,6 +27,8 @@ const main = async () => {
     new VispyrBackend(app, 'VispyrStack', {
       env: { account, region },
       peerVpcId,
+      domain,
+      email,
     });
 
     app.synth();

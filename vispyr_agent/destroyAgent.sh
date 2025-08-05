@@ -64,25 +64,54 @@ service_exists() {
 
 stop_services() {
     log_info "Stopping and disabling services..."
-    
+
+    # Alloy
     if service_exists "alloy"; then
         log_info "Stopping Alloy service..."
-        sudo systemctl stop alloy 2>/dev/null || log_warn "Alloy service was not running"
+        sudo systemctl stop alloy 2>/dev/null || log_warn "Alloy service stop failed or was not running"
+        # Give it a moment to shut down gracefully
+        sleep 1
+        # Force kill any leftover alloy process(es)
+        if pgrep -f alloy >/dev/null 2>&1; then
+            log_warn "Found leftover alloy process, killing..."
+            sudo pkill -f alloy || true
+        fi
         sudo systemctl disable alloy 2>/dev/null || log_warn "Alloy service was not enabled"
-        log_success "Alloy service stopped and disabled"
+        # Clear any stale failed state so status is clean
+        sudo systemctl reset-failed alloy 2>/dev/null || true
+        log_success "Alloy service stopped, disabled, and cleaned up"
     else
-        log_info "Alloy service not found, skipping"
+        log_info "Alloy service not found, attempting cleanup anyway..."
+        # Even if unit file is missing, try to kill leftover processes and reset
+        if pgrep -f alloy >/dev/null 2>&1; then
+            log_warn "Found leftover alloy process, killing..."
+            sudo pkill -f alloy || true
+        fi
+        sudo systemctl reset-failed alloy 2>/dev/null || true
     fi
-    
+
+    # Node Exporter
     if service_exists "node_exporter"; then
         log_info "Stopping Node Exporter service..."
-        sudo systemctl stop node_exporter 2>/dev/null || log_warn "Node Exporter service was not running"
+        sudo systemctl stop node_exporter 2>/dev/null || log_warn "Node Exporter service stop failed or was not running"
+        sleep 1
+        if pgrep -f node_exporter >/dev/null 2>&1; then
+            log_warn "Found leftover node_exporter process, killing..."
+            sudo pkill -f node_exporter || true
+        fi
         sudo systemctl disable node_exporter 2>/dev/null || log_warn "Node Exporter service was not enabled"
-        log_success "Node Exporter service stopped and disabled"
+        sudo systemctl reset-failed node_exporter 2>/dev/null || true
+        log_success "Node Exporter service stopped, disabled, and cleaned up"
     else
-        log_info "Node Exporter service not found, skipping"
+        log_info "Node Exporter service not found, attempting cleanup anyway..."
+        if pgrep -f node_exporter >/dev/null 2>&1; then
+            log_warn "Found leftover node_exporter process, killing..."
+            sudo pkill -f node_exporter || true
+        fi
+        sudo systemctl reset-failed node_exporter 2>/dev/null || true
     fi
-    
+
+    # Reload systemd to pick up removals
     sudo systemctl daemon-reload
     log_success "Systemd daemon reloaded"
 }
