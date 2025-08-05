@@ -37,12 +37,6 @@ const selectSubnet = async (peerVpcId: string, region: Region) => {
     },
   ]);
 
-  p(
-    chalk.green(
-      `Selected: ${selectedSubnet.name} (Route Table: ${selectedSubnet.routeTableId})`
-    )
-  );
-
   return selectedSubnet;
 };
 

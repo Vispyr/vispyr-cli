@@ -2,20 +2,20 @@ import chalk from 'chalk';
 import generateNonOverlappingCidr from '../utils/deploy_tools/generateNonOverlappingCidr.js';
 import selectSubnet from '../utils/deploy_tools/subnetService.js';
 import getPeerVpcId from '../utils/deploy_tools/peerVpcService.js';
-import { validateCredentials } from '../utils/config.js';
-import { acknowledgeNotice, p } from '../utils/shared.js';
+import { acknowledgeNotice, p, validateCredentials } from '../utils/shared.js';
 import { Region } from '../types.js';
 import { VispyrSSMManager } from '../utils/ssmService.js';
 import confirmDeployment from '../utils/deploy_tools/confirmDeploy.js';
 import { cleanupAddedRoutes } from '../utils/deploy_tools/routingService.js';
 import generateConfigAlloy from '../utils/deploy_tools/alloyService.js';
 import { verifyConnection } from '../utils/deploy_tools/connectionService.js';
-import showBackendInfo from '../utils/deploy_tools/showBackendInfo.js';
+import showBackendInfo from '../utils/deploy_tools/displayBackendInfo.js';
 import {
   bootstrap,
   deployInfrastructure,
   runCdkSynth,
 } from '../utils/deploy_tools/cdkDeploy.js';
+import displayCertbotInstructions from '../utils/deploy_tools/displayCertbotInstructions.js';
 
 const deployBackend = async () => {
   try {
@@ -25,6 +25,7 @@ const deployBackend = async () => {
     validateCredentials();
 
     const region = process.env.AWS_REGION as Region;
+    const domain = process.env.VISPYR_DOMAIN as string;
     const { peerVpcId, cidrBlock } = await getPeerVpcId(region);
     const newVpcCidr = generateNonOverlappingCidr(cidrBlock);
     const selectedSubnet = await selectSubnet(peerVpcId, region);
@@ -38,9 +39,10 @@ const deployBackend = async () => {
     const params = await ssmManager.getDeploymentParameters();
 
     await generateConfigAlloy(params.privateIp, region);
+    await displayCertbotInstructions(params.publicIp, domain);
     await verifyConnection(params, region, selectedSubnet, newVpcCidr);
 
-    showBackendInfo(params.httpsEndpoint, params.publicIp);
+    showBackendInfo(params.httpsEndpoint, domain, params.publicIp);
   } catch (err) {
     console.error(chalk.red('\nAn error occurred:'), err);
 
