@@ -9,11 +9,17 @@ AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY
 AWS_REGION
 PEER_VPC_ID
+VISPYR_DOMAIN
+VISPYR_EMAIL
 ```
 
+Required:
 - `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are generated in users section of AWS
 - `AWS_REGION` is your desired region to deploy
 - `PEER_VPC_ID` is the VPC ID of your desired app to instrument
+
+Optional:
+- `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, then the CLI will default to a self-signed certificate. The domain should follow the structure `example.com` and the email can be any valid email, such as `example@gmail.com`.
 
 Navigate to the CLI's root directory and run 
 
@@ -33,6 +39,8 @@ This will walk you through a series of steps:
 - Confirm deployment
 
 This process usually takes between 5-10 minutes.
+
+If using a custom domain, you will be prompted to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, you can hit `[ENTER]` to continue.
 
 You will be provided the Grafana link and the `vispyr_agent` file. Follow the `Next Steps` instructions.
 
