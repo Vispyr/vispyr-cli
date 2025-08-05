@@ -9,7 +9,7 @@ import confirmDeployment from '../utils/deploy_tools/confirmDeploy.js';
 import { cleanupAddedRoutes } from '../utils/deploy_tools/routingService.js';
 import generateConfigAlloy from '../utils/deploy_tools/alloyService.js';
 import { verifyConnection } from '../utils/deploy_tools/connectionService.js';
-import showBackendInfo from '../utils/deploy_tools/displayBackendInfo.js';
+import displayBackendInfo from '../utils/deploy_tools/displayBackendInfo.js';
 import {
   bootstrap,
   deployInfrastructure,
@@ -37,12 +37,13 @@ const deployBackend = async () => {
 
     const ssmManager = new VispyrSSMManager();
     const params = await ssmManager.getDeploymentParameters();
-
     await generateConfigAlloy(params.privateIp, region);
-    await displayCertbotInstructions(params.publicIp, domain);
+
+    if (domain) await displayCertbotInstructions(params.publicIp, domain);
+
     await verifyConnection(params, region, selectedSubnet, newVpcCidr);
 
-    showBackendInfo(params.httpsEndpoint, domain, params.publicIp);
+    displayBackendInfo(params.httpsEndpoint, domain, params.publicIp);
   } catch (err) {
     console.error(chalk.red('\nAn error occurred:'), err);
 

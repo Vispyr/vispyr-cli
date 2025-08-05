@@ -8,8 +8,8 @@ const displayCertbotInstructions = async (publicIp: string, domain: string) => {
   p(chalk.white('1. Log in to your domain registrar'));
   p(chalk.white('2. Edit DNS settings for'), chalk.green(domain));
   p(chalk.white('3. Set a new A Record:'));
-  p(chalk.yellow('     Host:'), chalk.green('vispyr'));
-  p(chalk.yellow('     Value:'), chalk.green(publicIp));
+  p(chalk.yellow('    Host:'), chalk.green('vispyr'));
+  p(chalk.yellow('    Value:'), chalk.green(publicIp));
   p();
 
   await inquirer.prompt([
