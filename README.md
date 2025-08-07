@@ -1,10 +1,19 @@
-# Purposes
+# What it does
 
-This CLI performs 2 main functions:
-1. Deploy Vispyr infrastructure.
-2. Teardown Vispyr infrastructure.
+The Vispyr Command Line Interface is designed to perform 2 basic functions:
+1. To deploy Vispyr infrastructure in AWS.
+2. To remove Vispyr infrastructure from AWS.
+It automates a great deal of these processes and therefore the following sections go into details on what happens "under the hood" when the CLI is running.
 
-## Deployment
+# Deployment
+
+## Requirements
+
+1. AWS credentials and region.
+2. The VPC ID where the instrumented application "lives".
+3. (Optional) Custom domain and email if user wants to access Vispyr dashboard from their domain.
+
+## Process
 
 It follows a step-by-step process:
 
@@ -28,36 +37,35 @@ It follows a step-by-step process:
 * Provides URL for accessing Vispyr's dashboard in Grafana's UI
 * Displays instructions for setting up agent from folder containing all pertinent configuration
 
-# To run the CLI
+## Instructions
 
-## Initial setup
+### Initial setup
 
 Include a `.env` file in the CLI's root directory with these fields
 
 ```
-AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY
-AWS_REGION
-PEER_VPC_ID
-VISPYR_DOMAIN
-VISPYR_EMAIL
+AWS_ACCESS_KEY_ID=<your_access_key_id>
+AWS_SECRET_ACCESS_KEY=<your_aws_secret_access_key>
+AWS_REGION=<your_region>
+PEER_VPC_ID=<VPC_ID_of_your_app>
+VISPYR_DOMAIN=<example.com> (optional)
+VISPYR_EMAIL=<example@gmail.com> (optional)
 ```
 
-Required:
-- `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are generated in users section of AWS
-- `AWS_REGION` is your desired region to deploy
-- `PEER_VPC_ID` is the VPC ID of your desired app to instrument
+To find `<your_access_key_id>` and `<your_aws_secret_access_key>`, navigate to the users section of your AWS account. `<your_region>` is the region where Vispyr's infrastructure will be deployed, it must be the same region where your app is. `<VPC_ID_of_your_app>` is the VPC ID of the EC2 where the instrumented app is installed.
 
 Optional:
-- `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, then the CLI will default to a self-signed certificate. The domain should follow the structure `example.com` and the email can be any valid email, such as `example@gmail.com`.
+The values associated with `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, then the CLI will default to a self-signed certificate, which will then prompt the browser to warn the user every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
 
-Navigate to the CLI's root directory and run 
+Now navigate to the CLI's root directory and run 
 
 ```
 npm install
 ```
 
-## Infrastructure Deployment
+### CLI session
+
+To execute the CLI program run:
 
 ```
 npm run build && npm start -- deploy
@@ -74,7 +82,9 @@ If using a custom domain, you will be prompted to navigate to your domain regist
 
 You will be provided the Grafana link and the `vispyr_agent` file. Follow the `Next Steps` instructions.
 
-## Infrastructure Teardown
+# Teardown
+
+## Process
 
 This will tear down the entire Vispyr Backend, including:
 - VispyrStack (CloudFormation)
@@ -84,6 +94,8 @@ This will tear down the entire Vispyr Backend, including:
 - Elastic IP used for the Internet Gateway
 - Routes used for the Peering Connection
 - Local files created by the CLI
+
+## Instructions
 
 ```
 npm start -- destroy
