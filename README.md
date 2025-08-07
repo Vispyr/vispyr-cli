@@ -1,3 +1,33 @@
+# Purposes
+
+This CLI performs 2 main functions:
+1. Deploy Vispyr infrastructure.
+2. Teardown Vispyr infrastructure.
+
+## Deployment
+
+It follows a step-by-step process:
+
+### Validation
+* Tells the user everything that'll be deployed and asks for confirmation
+* Ensures all the necessary AWS credentials are present
+### Network discovery:
+* Finds the peering VPC
+* Generates non-overlapping CIDR
+* Queries the user for subnet selection
+### Infrastructure deployment:
+* Converts TypeScript CDK code into JSON CloudFormation template and saves in cdk.out/ directory
+* Sets up the CDK prerequisites in your AWS account: S3 bucket for storing assets and IAM roles for the CDK operations
+* Deploys AWS resources showing real-time CloudFormation progress and waits for completion
+### Post-deployment setup: 
+* Gets the deployed infrastructure details 
+* Uses those details to generate the configuration used by Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend")
+* If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates
+* Tests that the VPC peering and networking is working correctly
+### User information: 
+* Provides URL for accessing Vispyr's dashboard in Grafana's UI
+* Displays instructions for setting up agent from folder containing all pertinent configuration
+
 # To run the CLI
 
 ## Initial setup
