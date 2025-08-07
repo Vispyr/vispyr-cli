@@ -6,6 +6,7 @@ const message = `The following will be deployed to AWS:
 - Vispyr Backend EC2 instance
 - VispyrStack on CloudFormation
 - CDKToolkit and CDK S3 bucket (if not already present)
+- S3 Bucket for traces
 - SSM Parameters for Vispyr Backend
 - An Elastic IP + NAT Gateway
 - Additional routes for VPC peering
