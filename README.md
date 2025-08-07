@@ -1,8 +1,10 @@
 # What it does
 
 The Vispyr Command Line Interface is designed to perform 2 basic functions:
+
 1. To deploy Vispyr infrastructure in AWS.
 2. To remove Vispyr infrastructure from AWS.
+
 It automates a great deal of these processes and therefore the following sections go into details on what happens "under the hood" when the CLI is running.
 
 # Deployment
