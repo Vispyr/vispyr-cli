@@ -2,8 +2,8 @@
 
 The Vispyr Command Line Interface is designed to perform 2 basic functions:
 
-1. Deploy Vispyr infrastructure in AWS.
-2. Remove Vispyr infrastructure from AWS.
+1. [Deploy](##deployment) Vispyr infrastructure in AWS.
+2. [Remove](##teardown) Vispyr infrastructure from AWS.
 
 It automates a great deal of these processes and therefore the following sections go into details of what happens "under the hood" when the CLI is running, before providing a set of instructions with all the steps necessary to operate the tool.
 
@@ -16,8 +16,6 @@ It automates a great deal of these processes and therefore the following section
 3. (Optional) Custom domain and email if user wants to access Vispyr dashboard from their domain.
 
 ## Process
-
-It follows a step-by-step process:
 
 ### Validation
 * Tells the user everything that'll be deployed and asks for confirmation
@@ -59,7 +57,7 @@ To find `<your_access_key_id>` and `<your_aws_secret_access_key>`, navigate to t
 Optional:
 The values associated with `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, then the CLI will default to a self-signed certificate, which will then prompt the browser to warn the user every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
 
-Now navigate to the CLI's root directory and run 
+Now navigate to the CLI's root directory and run:
 
 ```
 npm install
