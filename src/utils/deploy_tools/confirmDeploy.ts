@@ -21,6 +21,7 @@ const confirmDeployment = async () => {
       default: false,
     },
   ]);
+  p();
 
   if (!confirmDeploy) {
     p(chalk.yellow('Deployment cancelled'));
