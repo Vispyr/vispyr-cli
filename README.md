@@ -1,6 +1,6 @@
 # What this tool does
 
-The Vispyr Command Line Interface has 2 basic functions:
+The **Vispyr Command Line Interface** has 2 basic functions:
 
 1. [Deploy](#instructions-to-deploy) Vispyr infrastructure in AWS.
 2. [Teardown](#instructions-to-teardown) Vispyr infrastructure from AWS.
@@ -54,28 +54,15 @@ To execute the CLI program run:
 npm run build && npm start -- deploy
 ```
 
-This will walk you through a series of steps:
-- Select the desired CIDR range (required step as the CIDR must be different between VPCs)
-- Select the Subnet you wish to link to backend (should be the one with the app you want to instrument)
-- Confirm deployment
+This will prompt you to select the desired CIDR range. Then you'll select the Subnet you wish to link to Vispyr's backend (should be the same where the app being instrumented is). And finally you'll be prompted to confirm the deployment.
 
 This process usually takes between 5-10 minutes.
 
-If using a custom domain, you will be prompted to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, you can hit `[ENTER]` to continue.
+If using a custom domain, you still will be prompted to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, hit `[ENTER]` to continue.
 
 You will be provided the Grafana link and the `vispyr_agent` file. Follow the `Next Steps` instructions.
 
-## Instructions to Teardown
-
-```
-npm start -- destroy
-```
-
-Follow the prompts, then wait for this process to finish. Usually takes 5-10 minutes.
-
-This should clean everything up!
-
-## Process Steps
+## Deployment Process
 
 1. Validation:  Tells the user everything that'll be deployed and asks for confirmation. Ensures all the necessary AWS credentials are present.
 2. Network discovery: Finds the peering VPC. Generates non-overlapping CIDR. Queries the user for subnet selection.
@@ -83,17 +70,30 @@ This should clean everything up!
 4. Post-deployment setup: Gets the deployed infrastructure details. Uses those details to generate the configuration used by Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates Tests that the VPC peering and networking is working correctly
 5. User information: Provides URL for accessing Vispyr's dashboard in Grafana's UI. Displays instructions for setting up agent from folder containing all pertinent configuration.
 
-# Teardown
+## Instructions to Teardown
 
-## Process
+To completely remove all Vispyr infrastructure from your AWS account, run:
 
-This will tear down the entire Vispyr Backend, including:
-- VispyrStack (CloudFormation)
-- Vispyr EC2 Instance
-- CDKToolkit + S3 Bucket, unless you have other stacks present
-- SSM Parameters for Vispyr Backend
-- Elastic IP used for the Internet Gateway
-- Routes used for the Peering Connection
-- Local files created by the CLI
+```bash
+npm start -- destroy
+```
 
+The teardown process will automatically clean up **all** Vispyr-related resources:
+- **VispyrStack** (CloudFormation stack with all resources)
+- **Vispyr EC2 Instance** (monitoring server)
+- **Elastic IP** (static IP for the instance)
+- **VPC Peering Connection** routes (networking between VPCs)
+- **CDK Toolkit** and associated S3 bucket (unless other CDK stacks exist)
 
+All configuration & data:
+- **SSM Parameters** (stored deployment configuration)
+- **Local files** (generated agent files and CLI artifacts)
+
+## Teardown Process
+
+1. Confirmation prompt: You'll be asked to confirm the teardown.
+2. Automated cleanup: The CLI handles all resource removal automatically.
+3. Progress feedback: Real-time status updates during teardown.
+4. Completion confirmation: Success message when finished.
+
+The CLI will provide guidance on manual cleanup if automatic teardown fails.
