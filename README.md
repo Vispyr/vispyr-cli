@@ -15,7 +15,7 @@ When deploying, it automates the creation of:
 ## Requirements
 
 1. AWS credentials and region.
-2. The VPC ID where the instrumented application "lives".
+2. The VPC ID where the instrumented application is hosted.
 3. (Optional) Custom domain and email if user wants to access Vispyr dashboard from their domain.
 
 ## Instructions to Deploy
