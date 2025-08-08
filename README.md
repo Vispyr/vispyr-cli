@@ -1,4 +1,4 @@
-# What this tool does
+# What Vispyr CLI does
 
 The **Vispyr Command Line Interface** has 2 basic functions:
 
@@ -8,7 +8,7 @@ The **Vispyr Command Line Interface** has 2 basic functions:
 When deploying, it automates the creation of:
 * A VPC with a peering connection to your existing VPC.
 * An EC2 instance.
-* A Vispyr agent on your EC2, responsible for instrumenting your application.
+* A Vispyr agent, responsible for instrumenting your application.
 * Routing and security group rules.
 * Vispyr's [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend").
 
@@ -70,20 +70,22 @@ To completely remove all Vispyr infrastructure from your AWS account, run:
 npm start -- destroy
 ```
 
-The teardown process will automatically clean up **all** Vispyr-related resources:
+It will prompt you for confirmation. By continuing, you'll see status updates until a success message is presented. The teardown process will automatically clean up **all** Vispyr-related resources:
 - **VispyrStack** (CloudFormation stack with all resources)
 - **Vispyr EC2 Instance** (monitoring server)
 - **Elastic IP** (static IP for the instance)
 - **VPC Peering Connection** routes (networking between VPCs)
 - **CDK Toolkit** and associated S3 bucket (unless other CDK stacks exist)
 
-And all configuration & data:
+And all configuration/remaining data:
 - **SSM Parameters** (stored deployment configuration)
 - **Local files** (generated agent files and CLI artifacts)
 
+The CLI will provide guidance on manual cleanup if automatic teardown fails.
+
 # Details
 
-For a deeper dive into the technical details of how the CLI processes are orchestrating the deployment and teardown of Vispyr's infrastructure, please read below.
+For a deeper dive into the technical details of how the CLI processes are orchestrating the deployment and teardown of Vispyr's infrastructure, read below.
 
 ## Deployment Process
 
@@ -99,5 +101,3 @@ For a deeper dive into the technical details of how the CLI processes are orches
 2. Automated cleanup: The CLI handles all resource removal automatically.
 3. Progress feedback: Real-time status updates during teardown.
 4. Completion confirmation: Success message when finished.
-
-The CLI will provide guidance on manual cleanup if automatic teardown fails.
