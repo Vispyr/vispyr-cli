@@ -54,13 +54,13 @@ To execute the CLI program run:
 npm run build && npm start -- deploy
 ```
 
-This will prompt you to select the desired CIDR range. Then you'll select the Subnet you wish to link to Vispyr's backend (should be the same where the app being instrumented is). And finally you'll be prompted to confirm the deployment.
+This will prompt you to select the desired CIDR range. Then you'll select the Subnet you wish to link to [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") (should be the same where the app being instrumented is). And finally you'll be prompted to confirm the deployment.
 
 This process usually takes between 5-10 minutes.
 
-If using a custom domain, you still will be prompted to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, hit `[ENTER]` to continue.
+If using a custom domain, you will be asked to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, hit `[ENTER]` to continue.
 
-You will be provided the Grafana link and the `vispyr_agent` file. Follow the `Next Steps` instructions.
+You will be provided the Grafana link and the `vispyr_agent` file. Use them in the following `Next Steps` instructions.
 
 ## Instructions to Teardown
 
@@ -83,9 +83,9 @@ And all configuration/remaining data:
 
 The CLI will provide guidance on manual cleanup if automatic teardown fails.
 
-# Details
+<details>
 
-For a deeper dive into the technical details of how the CLI processes are orchestrating the deployment and teardown of Vispyr's infrastructure, read below.
+<summary>Take a closer look into the technical details of how the CLI processes are orchestrating the deployment and teardown of Vispyr's infrastructure.</summary>
 
 ## Deployment Process
 
@@ -101,3 +101,5 @@ For a deeper dive into the technical details of how the CLI processes are orches
 2. Automated cleanup: The CLI handles all resource removal automatically.
 3. Progress feedback: Real-time status updates during teardown.
 4. Completion confirmation: Success message when finished.
+
+</details>
