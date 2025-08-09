@@ -85,21 +85,21 @@ The CLI will provide guidance on manual cleanup if automatic teardown fails.
 
 <details>
 
-<summary>Take a closer look into the technical details of how the CLI processes are orchestrating the deployment and teardown of Vispyr's infrastructure.</summary>
+<summary>View detailed steps</summary>
 
 ## Deployment Process
 
-1. Validation:  Tells the user everything that'll be deployed and asks for confirmation. Ensures all the necessary AWS credentials are present.
-2. Network discovery: Finds the peering VPC. Generates non-overlapping CIDR. Queries the user for subnet selection.
-3. Infrastructure deployment: Converts TypeScript CDK code into JSON CloudFormation template and saves in cdk.out/ directory. Sets up the CDK prerequisites in your AWS account: S3 bucket for storing assets and IAM roles for the CDK operations. Deploys AWS resources showing real-time CloudFormation progress and waits for completion.
-4. Post-deployment setup: Gets the deployed infrastructure details. Uses those details to generate the configuration used by Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates Tests that the VPC peering and networking is working correctly
-5. User information: Provides URL for accessing Vispyr's dashboard in Grafana's UI. Displays instructions for setting up agent from folder containing all pertinent configuration.
+1. **Validation**:  Tells the user everything that'll be deployed and asks for confirmation. Ensures all the necessary AWS credentials are present.
+2. **Network discovery**: Finds the peering VPC. Generates non-overlapping CIDR. Queries the user for subnet selection.
+3. **Infrastructure deployment**: Converts TypeScript CDK code into JSON CloudFormation template and saves in cdk.out/ directory. Sets up the CDK prerequisites in your AWS account: S3 bucket for storing assets and IAM roles for the CDK operations. Deploys AWS resources showing real-time CloudFormation progress and waits for completion.
+4. **Post-deployment setup**: Gets the deployed infrastructure details. Uses those details to generate the configuration used by Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates Tests that the VPC peering and networking is working correctly
+5. **User information**: Provides URL for accessing Vispyr's dashboard in Grafana's UI. Displays instructions for setting up agent from folder containing all pertinent configuration.
 
 ## Teardown Process
 
-1. Confirmation prompt: You'll be asked to confirm the teardown.
-2. Automated cleanup: The CLI handles all resource removal automatically.
-3. Progress feedback: Real-time status updates during teardown.
-4. Completion confirmation: Success message when finished.
+1. **Confirmation prompt**: You'll be asked to confirm the teardown.
+2. **Automated cleanup**: The CLI handles all resource removal automatically.
+3. **Progress feedback**: Real-time status updates during teardown.
+4. **Completion confirmation**: Success message when finished.
 
 </details>
