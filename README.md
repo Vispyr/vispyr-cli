@@ -1,10 +1,10 @@
 <div align="center">
-  <a href="#">
+  <a href="https://vispyr.com"
     <img src="https://raw.githubusercontent.com/vispyr/.github/main/profile/assets/vispyr-banner.png" alt="Vispyr Banner" width="400">
   </a>
 </div>
 
-# What Vispyr CLI does
+# What the CLI does
 
 The **Vispyr Command Line Interface** has 2 basic functions:
 
