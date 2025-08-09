@@ -1,6 +1,6 @@
 <div align="center">
   <a href="#">
-    <img src=".github/profile/assets/vispyr-banner.png" alt="Vispyr Banner" width="400">
+    <img src="https://raw.githubusercontent.com/vispyr/.github/main/profile/assets/vispyr-banner.png" alt="Vispyr Banner" width="400">
   </a>
 </div>
 
