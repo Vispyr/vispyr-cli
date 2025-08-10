@@ -1,3 +1,5 @@
+// Metrics & Traces
+
 const opentelemetry = require('@opentelemetry/sdk-node');
 const {
   getNodeAutoInstrumentations,
@@ -20,3 +22,15 @@ const sdk = new opentelemetry.NodeSDK({
 
 console.log('Starting OTLP Instrumentation');
 sdk.start();
+
+// Profiles
+
+const Pyroscope = require('@pyroscope/nodejs');
+
+Pyroscope.init({
+  serverAddress: 'http://localhost:9999',
+  appName: process.env.OTEL_SERVICE_NAME || 'node_app',
+});
+
+console.log('Starting Pyroscope Profiler');
+Pyroscope.start();
