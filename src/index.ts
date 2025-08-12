@@ -2,7 +2,6 @@
 
 import 'dotenv/config';
 import { Command } from 'commander';
-// import figlet from 'figlet';
 import chalk from 'chalk';
 
 import destroyBackend from './commands/destroy.js';
