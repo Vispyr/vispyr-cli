@@ -67,10 +67,6 @@ otelcol.receiver.otlp "default" {
     endpoint = "0.0.0.0:4317"
   }
 
-  http {
-    endpoint = "0.0.0.0:4318"
-  }
-
   output {
     traces = [ otelcol.connector.spanmetrics.default.input, otelcol.exporter.otlp.gateway_collector.input]
     metrics = [otelcol.exporter.otlp.gateway_collector.input]
