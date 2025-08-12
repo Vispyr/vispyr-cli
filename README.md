@@ -68,6 +68,25 @@ If using a custom domain, you will be asked to navigate to your domain registrar
 
 You will be provided the Grafana link and the `vispyr_agent` file. Use them in the following `Next Steps` instructions.
 
+To add instrumentation into your app:
+
+1. Place the `vispyr_agent` folder to the root directory of your application (same location as `package.json`).
+2. Modify the production start command in `package.json` to include:
+
+```
+bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/index.js
+```
+
+3. Populate the following environment variables to name your application in Vispyr's UI:
+```
+OTEL_SERVICE_NAME=<your-application-name>
+OTEL_RESOURCE_ATTRIBUTES=service.namespace=<your-application-name>
+```
+
+If you're using `.env` in your production environment, include the flag `--env-file=[path/to/file]` .
+
+4. Redeploy your app through your regular CI/CD process.
+
 <details>
 
 <summary>View detailed steps</summary>
