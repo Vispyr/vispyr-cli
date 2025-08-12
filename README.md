@@ -50,6 +50,7 @@ This will tear down the entire Vispyr Backend, including:
 - VispyrStack (CloudFormation)
 - Vispyr EC2 Instance
 - CDKToolkit + S3 Bucket, unless you have other stacks present
+- S3 Bucket for traces
 - SSM Parameters for Vispyr Backend
 - Elastic IP used for the Internet Gateway
 - Routes used for the Peering Connection

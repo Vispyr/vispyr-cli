@@ -1,4 +1,9 @@
-const vispyrBackendCommands = (domain?: string, email?: string): string[] => {
+const vispyrBackendCommands = (
+  bucketName: string,
+  region: string,
+  domain?: string,
+  email?: string
+): string[] => {
   const baseCommands = [
     '#!/bin/bash',
     'yum update -y',
@@ -37,6 +42,7 @@ const vispyrBackendCommands = (domain?: string, email?: string): string[] => {
           // No domain provided - use self-signed with EC2 DNS
           'echo "No custom domain provided - using self-signed certificate"',
           'USE_LETSENCRYPT=false',
+          'EMAIL=""', // Explicitly set empty email
           '# Get EC2 DNS for self-signed cert',
           'for i in {1..50}; do',
           '  DNS_NAME=$(ec2-metadata --public-hostname | cut -d " " -f2)',
@@ -48,6 +54,20 @@ const vispyrBackendCommands = (domain?: string, email?: string): string[] => {
           '  sleep 5',
           'done',
         ];
+
+  // Add S3 configuration for Tempo
+  const s3ConfigCommands =
+    bucketName && region
+      ? [
+          `TEMPO_S3_BUCKET="${bucketName}"`,
+          `TEMPO_S3_REGION="${region}"`,
+          `TEMPO_S3_ENDPOINT="s3.${region}.amazonaws.com"`,
+          `echo "Tempo S3 configuration:"`,
+          `echo "  Bucket: ${bucketName}"`,
+          `echo "  Region: ${region}"`,
+          `echo "  Endpoint: s3.${region}.amazonaws.com"`,
+        ]
+      : ['echo "No S3 configuration provided for Tempo"'];
 
   const remainingCommands = [
     // Create web root for certbot webroot validation
@@ -90,9 +110,43 @@ const vispyrBackendCommands = (domain?: string, email?: string): string[] => {
 
     // Clone and start application first (needed for health checks during cert process)
     'cd /home/ec2-user',
-    'git clone https://github.com/Vispyr/vispyr-backend.git',
+    'git clone -b s3-tempo-config-test --single-branch https://github.com/Vispyr/vispyr-backend.git',
     'chown -R ec2-user:ec2-user vispyr-backend',
     'cd vispyr-backend',
+
+    // Export S3 environment variables for the application
+    ...(bucketName && region
+      ? [
+          `export TEMPO_S3_BUCKET="${bucketName}"`,
+          `export TEMPO_S3_REGION="${region}"`,
+          `export TEMPO_S3_ENDPOINT="s3.${region}.amazonaws.com"`,
+          'echo "S3 environment variables exported for application"',
+          '',
+          '# Make environment variables persistent',
+          'cat >> /etc/environment << EOF',
+          `TEMPO_S3_BUCKET=${bucketName}`,
+          `TEMPO_S3_REGION=${region}`,
+          `TEMPO_S3_ENDPOINT=s3.${region}.amazonaws.com`,
+          'EOF',
+          '',
+          '# Also add to ec2-user profile for SSH sessions',
+          'cat >> /home/ec2-user/.bashrc << EOF',
+          `export TEMPO_S3_BUCKET="${bucketName}"`,
+          `export TEMPO_S3_REGION="${region}"`,
+          `export TEMPO_S3_ENDPOINT="s3.${region}.amazonaws.com"`,
+          'EOF',
+          '',
+          '# Source the environment for current session',
+          'source /etc/environment',
+          '',
+          '# Substitute environment variables in tempo config',
+          'cd /home/ec2-user/vispyr-backend',
+          `sed -i "s/\\\${TEMPO_S3_BUCKET}/${bucketName}/g" tempo/tempo.yaml`,
+          `sed -i "s/\\\${TEMPO_S3_REGION}/${region}/g" tempo/tempo.yaml`,
+          `sed -i "s/\\\${TEMPO_S3_ENDPOINT}/s3.${region}.amazonaws.com/g" tempo/tempo.yaml`,
+          'echo "Tempo configuration updated with S3 settings"',
+        ]
+      : []),
 
     // Start services and wait for Grafana to be ready
     '/usr/local/bin/docker-compose up -d',
@@ -109,7 +163,7 @@ const vispyrBackendCommands = (domain?: string, email?: string): string[] => {
     'done',
 
     // Obtain SSL certificate based on configuration
-    'if [[ "$USE_LETSENCRYPT" == "true" ]]; then',
+    'if [[ "$USE_LETSENCRYPT" == "true" && -n "$EMAIL" && -n "$DNS_NAME" ]]; then',
     '  echo "Attempting to obtain Let\'s Encrypt certificate..."',
     '  echo "Note: This requires DNS to be properly configured"',
     '  SSL_SUCCESS=false',
@@ -237,7 +291,12 @@ const vispyrBackendCommands = (domain?: string, email?: string): string[] => {
     'fi',
   ];
 
-  return [...baseCommands, ...domainConfigCommands, ...remainingCommands];
+  return [
+    ...baseCommands,
+    ...domainConfigCommands,
+    ...s3ConfigCommands,
+    ...remainingCommands,
+  ];
 };
 
 export default vispyrBackendCommands;
