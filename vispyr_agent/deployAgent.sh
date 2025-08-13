@@ -79,13 +79,13 @@ detect_system() {
     elif command -v dnf >/dev/null 2>&1; then
         DISTRO="fedora"
         PKG_MANAGER="dnf"
-        INSTALL_CMD="dnf install -y"
+        INSTALL_CMD="dnf install --assumeyes"
         UPDATE_CMD="dnf makecache"
         log_info "Detected Fedora/RHEL 8+ system"
     elif command -v yum >/dev/null 2>&1; then
         DISTRO="rhel"
         PKG_MANAGER="yum"
-        INSTALL_CMD="yum install -y"
+        INSTALL_CMD="yum install --assumeyes"
         UPDATE_CMD="yum makecache"
         log_info "Detected RHEL/CentOS system"
     else
@@ -182,9 +182,9 @@ EOF
     if ! sudo $INSTALL_CMD alloy; then
         log_warn "GPG verification failed, trying with disabled GPG check..."
         if [ "$DISTRO" = "debian" ]; then
-            sudo apt-get install -y --allow-unauthenticated alloy
+            sudo $INSTALL_CMD --allow-unauthenticated alloy
         else
-            sudo $PKG_MANAGER install -y alloy --nogpgcheck
+            sudo $INSTALL_CMD alloy --nogpgcheck
         fi
     fi
     
