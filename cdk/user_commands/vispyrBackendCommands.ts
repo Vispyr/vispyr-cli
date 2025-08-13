@@ -110,7 +110,7 @@ const vispyrBackendCommands = (
 
     // Clone and start application first (needed for health checks during cert process)
     'cd /home/ec2-user',
-    'git clone -b s3-tempo-config-test --single-branch https://github.com/Vispyr/vispyr-backend.git',
+    'git clone https://github.com/Vispyr/vispyr-backend.git',
     'chown -R ec2-user:ec2-user vispyr-backend',
     'cd vispyr-backend',
 
