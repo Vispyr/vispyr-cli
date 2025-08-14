@@ -22,7 +22,7 @@ When deploying, it automates the creation of:
 
 1. AWS credentials and region of the EC2 where your application runs.
 2. The corresponding VPC ID.
-3. (Optional) Custom domain and email if user wants to access Vispyr dashboard from their domain.
+3. (Optional) Custom domain and email if the user wants to access Vispyr dashboard from their domain.
 
 ## Instructions to Deploy
 
@@ -84,23 +84,23 @@ You will be given some "Next Steps" instructions. They include the Grafana link 
 * Generates non-overlapping CIDR. 
 * Queries the user for subnet selection.
 3. **Infrastructure deployment**: 
-* Converts TypeScript CDK code into JSON CloudFormation template and saves in cdk.out/ directory. 
+* Converts TypeScript CDK code into JSON CloudFormation template and saves it in the cdk.out/ directory. 
 * Sets up the CDK prerequisites in your AWS account: S3 bucket for storing assets and IAM roles for the CDK operations. 
 * Deploys AWS resources showing real-time CloudFormation progress and waits for completion.
 4. **Post-deployment setup**: 
 * Gets the deployed infrastructure details. 
 * Uses those details to generate the configuration used by Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). 
 * If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates. 
-* Tests that the VPC peering and networking is working correctly.
+* Tests that the VPC peering and networking are working correctly.
 5. **User information**: 
 * Provides URL for accessing Vispyr's dashboard in Grafana's UI. 
-* Displays instructions for setting up agent from folder containing all pertinent configuration.
+* Displays instructions for setting up Agent from folder containing all pertinent configuration.
 
 </details>
 
 ### Deploying the Vispyr Agent
 
-Place the `vispyr_agent` folder mentioned the "Next Steps" of the CLI session in the root directory of your application (same location as the `package.json`).
+Place the `vispyr_agent` folder, mentioned the "Next Steps" of the CLI session, in the root directory of your application (same location as the `package.json`).
 
 Now edit `package.json` and modify the production start command of the application to:
 
@@ -123,7 +123,7 @@ Redeploy and restart your app through your regular CI/CD process.
 
 ## Instructions to Teardown
 
-To completely remove all [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") and its infrastructure from your AWS account, from the CLI root directory run:
+To completely remove all of [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") and its infrastructure from your AWS account, go to the CLI root directory and run:
 
 ```bash
 npm start -- destroy
@@ -144,11 +144,11 @@ The CLI will provide guidance on manual cleanup if automatic teardown fails.
 
 Remove the `vispyr_agent` folder and its contents from your application and redeploy it.
 
-Edit you `package.json` start command back to its initial form, i.e. instead of:
+Edit your `package.json` start command back to its initial form, i.e. instead of:
 ```
 bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/<your-app-name>.js
 ```
-Something like:
+Something similar to:
 ```
 node src/<your-app-name>
 ```
