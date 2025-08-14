@@ -48,7 +48,7 @@ You'll find `<your_access_key_id>` and `<your_aws_secret_access_key>` in the use
 
 `<your_region>` and `<VPC_ID_of_your_app>` are the AWS region and the VPC ID where the EC2 hosting your app is.
 
-> Optional: The values associated with `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
+> Optional: give values for `VISPYR_DOMAIN` and `VISPYR_EMAIL` if you would like to access Vispyr dashboard from your own, custom, UREL. They are used by Certbot for generating TLS certification. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
 
 Now run:
 
