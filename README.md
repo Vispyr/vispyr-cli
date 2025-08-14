@@ -20,15 +20,20 @@ When deploying, it automates the creation of:
 
 ## Requirements
 
-1. AWS credentials and region.
-2. The VPC ID where the instrumented application is hosted.
+1. AWS credentials and region of the EC2 where your application runs.
+2. The corresponding VPC ID.
 3. (Optional) Custom domain and email if user wants to access Vispyr dashboard from their domain.
 
 ## Instructions to Deploy
 
 ### Initial setup
 
-Include a `.env` file in the CLI's root directory with the following:
+Clone this repository and navigate to its root directory:
+```
+git clone https://github.com/Vispyr/vispyr-cli.git && cd vispyr-cli
+```
+
+Create a `.env` file as follows:
 
 ```
 AWS_ACCESS_KEY_ID=<your_access_key_id>
@@ -43,10 +48,9 @@ You'll find `<your_access_key_id>` and `<your_aws_secret_access_key>` in the use
 
 `<your_region>` and `<VPC_ID_of_your_app>` are the AWS region and the VPC ID where the EC2 hosting your app is.
 
-Optional:
-The values associated with `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to warn the user every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
+> Optional: The values associated with `VISPYR_DOMAIN` and `VISPYR_EMAIL` are used for Certbot. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
 
-Now navigate to the CLI's root directory and run:
+Now run:
 
 ```
 npm install
@@ -54,7 +58,7 @@ npm install
 
 ### CLI session
 
-To execute the CLI program run:
+To execute the CLI program, from the root directory run:
 
 ```
 npm run build && npm start -- deploy
@@ -64,34 +68,13 @@ This will prompt you to select the desired CIDR range. Then you'll select the Su
 
 This process usually takes between 5-10 minutes.
 
-If using a custom domain, you will be asked to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, hit `[ENTER]` to continue.
+> Optional: If using a custom domain, you will be asked to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, hit `[ENTER]` to continue.
 
-You will be provided the Grafana link and the `vispyr_agent` file. Use them in the following `Next Steps` instructions.
-
-To add instrumentation into your app:
-
-1. Place the `vispyr_agent` folder to the root directory of your application (same location as `package.json`).
-2. Modify the production start command in `package.json` to include:
-
-```
-bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/index.js
-```
-
-3. Populate the following environment variables to name your application in Vispyr's UI:
-```
-OTEL_SERVICE_NAME=<your-application-name>
-OTEL_RESOURCE_ATTRIBUTES=service.namespace=<your-application-name>
-```
-
-If you're using `.env` in your production environment, include the flag `--env-file=[path/to/file]` .
-
-4. Redeploy your app through your regular CI/CD process.
+You will be given some "Next Steps" instructions. They include the Grafana link and the location of the `vispyr_agent` folder.
 
 <details>
 
-<summary>View detailed steps</summary>
-
-## Deployment Process
+<summary>View CLI session in detail</summary>
 
 1. **Validation**:  
 * Tells the user everything that'll be deployed and asks for confirmation. 
@@ -115,6 +98,29 @@ If you're using `.env` in your production environment, include the flag `--env-f
 
 </details>
 
+### Deploying the Vispyr Agent
+
+Place the `vispyr_agent` folder mentioned the "Next Steps" of the CLI session in the root directory of your application (same location as the `package.json`).
+
+Now edit `package.json` and modify the production start command of the application to:
+
+```
+bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/<your-app-name>.js
+```
+
+`<your-app-name>` refers to the file name of your NodeJS application.
+
+> Optional: If you want to name your application something other than `node_app` on Vispyr's dashboard, populate the following variables in your application runtime environment:
+
+```
+OTEL_SERVICE_NAME=<your-app-name>
+OTEL_RESOURCE_ATTRIBUTES=service.namespace=<your-app-name>
+```
+
+> If you're using `.env` in your production environment, go back to `package.json` and include the flag `--env-file=./.env` (assuming the `.env` is in the same folder as your `package.json` file, otherwise substitute `./` with its relative path) in the node portion of the start command cited above.
+
+Redeploy and restart your app through your regular CI/CD process.
+
 ## Instructions to Teardown
 
 To completely remove all Vispyr infrastructure from your AWS account, run:
@@ -136,15 +142,11 @@ And all configuration/remaining data:
 
 The CLI will provide guidance on manual cleanup if automatic teardown fails.
 
-<details>
-
-<summary>View detailed steps</summary>
-
-## Teardown Process
-
-1. **Confirmation prompt**: You'll be asked to confirm the teardown.
-2. **Automated cleanup**: The CLI handles all resource removal automatically.
-3. **Progress feedback**: Real-time status updates during teardown.
-4. **Completion confirmation**: Success message when finished.
-
-</details>
+Edit you `package.json` start command back to its initial form, i.e. instead of:
+```
+bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/<your-app-name>.js
+```
+Something like:
+```
+node src/<your-app-name>
+```
