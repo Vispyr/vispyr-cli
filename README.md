@@ -16,7 +16,7 @@ When deploying, it automates the creation of:
 * An EC2 instance.
 * A Vispyr agent, responsible for instrumenting your application.
 * Routing and security group rules.
-* Vispyr's [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend").
+* [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend").
 
 ## Requirements
 
@@ -123,7 +123,7 @@ Redeploy and restart your app through your regular CI/CD process.
 
 ## Instructions to Teardown
 
-To completely remove all Vispyr infrastructure from your AWS account, run:
+To completely remove all [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") and its infrastructure from your AWS account, from the CLI root directory run:
 
 ```bash
 npm start -- destroy
@@ -141,6 +141,8 @@ And all configuration/remaining data:
 - **Local files** (generated agent files and CLI artifacts)
 
 The CLI will provide guidance on manual cleanup if automatic teardown fails.
+
+Remove the `vispyr_agent` folder and its contents from your application and redeploy it.
 
 Edit you `package.json` start command back to its initial form, i.e. instead of:
 ```
