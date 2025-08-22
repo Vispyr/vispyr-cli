@@ -50,6 +50,7 @@ You'll find `<your_access_key_id>` and `<your_aws_secret_access_key>` in the use
 
 <details>
     <summary>Optional</summary>
+
     Provide values for <code>VISPYR_DOMAIN</code> and <code>VISPYR_EMAIL</code> if you would like to access the Vispyr dashboard from your own, custom, UREL. They are used by Certbot for generating TLS certificates. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure <code>domainname.com</code>, and the email can be any valid email, such as <code>myemail@gmail.com</code>.
 </details>
 
@@ -73,6 +74,7 @@ This process usually takes between 5-10 minutes.
 
 <details>
     <summary>Optional</summary>
+
     If using a custom domain, you will be asked to navigate to your domain registrar and add the new A Record. Be sure to use <code>vispyr</code> as the host. Once this step is done, hit <code>[ENTER]</code> to continue.
 </details>
 
@@ -118,6 +120,7 @@ bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentat
 
 <details>
     <summary>Optional</summary>
+
     If you want to name your application something other than <code>node_app</code> on Vispyr's dashboard, populate the following variables in your application runtime environment:
 
 ```
