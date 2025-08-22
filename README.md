@@ -22,7 +22,7 @@ When deploying, it automates the creation of:
 
 1. AWS credentials and region of the EC2 where your application runs.
 2. The corresponding VPC ID.
-3. (Optional) Custom domain and email if the user wants to access Vispyr dashboard from their domain.
+3. (Optional) Custom domain and email if the user wants to access Vispyr dashboard from their own domain.
 
 ## Instructions to Deploy
 
@@ -48,7 +48,10 @@ You'll find `<your_access_key_id>` and `<your_aws_secret_access_key>` in the use
 
 `<your_region>` and `<VPC_ID_of_your_app>` are the AWS region and the VPC ID where the EC2 hosting your app is.
 
-> Optional: give values for `VISPYR_DOMAIN` and `VISPYR_EMAIL` if you would like to access Vispyr dashboard from your own, custom, UREL. They are used by Certbot for generating TLS certification. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
+<details>
+    <summary>Optional</summary>
+    Provide values for `VISPYR_DOMAIN` and `VISPYR_EMAIL` if you would like to access Vispyr dashboard from your own, custom, UREL. They are used by Certbot for generating TLS certification. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure `domainname.com` and the email can be any valid email, such as `myemail@gmail.com`.
+</details>
 
 Now run:
 
@@ -68,13 +71,16 @@ This will prompt you to select the desired CIDR range. Then you'll select the Su
 
 This process usually takes between 5-10 minutes.
 
-> Optional: If using a custom domain, you will be asked to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, hit `[ENTER]` to continue.
+<details>
+    <summary>Optional</summary>
+    If using a custom domain, you will be asked to navigate to your domain registrar and add the new A Record. Be sure to use `vispyr` as the host. Once this step is done, hit `[ENTER]` to continue.
+</details>
 
 You will be given some "Next Steps" instructions. They include the Grafana link and the location of the `vispyr_agent` folder.
 
 <details>
 
-<summary>View CLI session in detail</summary>
+<summary>Click here for a detailed, step-by=step description of the CLI session</summary>
 
 1. **Validation**:  
 * Tells the user everything that'll be deployed and asks for confirmation. 
@@ -110,14 +116,17 @@ bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentat
 
 `<your-app-name>` refers to the file name of your NodeJS application.
 
-> Optional: If you want to name your application something other than `node_app` on Vispyr's dashboard, populate the following variables in your application runtime environment:
+<details>
+    <summary>Optional</summary>
+    If you want to name your application something other than `node_app` on Vispyr's dashboard, populate the following variables in your application runtime environment:
 
 ```
 OTEL_SERVICE_NAME=<your-app-name>
 OTEL_RESOURCE_ATTRIBUTES=service.namespace=<your-app-name>
 ```
 
-> If you're using `.env` in your production environment, go back to `package.json` and include the flag `--env-file=./.env` (assuming the `.env` is in the same folder as your `package.json` file, otherwise substitute `./` with its relative path) in the node portion of the start command cited above.
+If using `.env` in your production environment, go back to `package.json` and include the flag `--env-file=./.env` (assuming the `.env` is in the same folder as your `package.json` file, otherwise substitute `./` with its relative path) in the node portion of the start command cited above.
+</details>
 
 Redeploy and restart your app through your regular CI/CD process.
 
