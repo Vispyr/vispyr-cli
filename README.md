@@ -80,7 +80,7 @@ You will be given some "Next Steps" instructions. They include the Grafana link 
 
 <details>
 
-<summary>Click here for a detailed, step-by=step description of the CLI session</summary>
+<summary>Click here for a detailed, step-by-step description of the CLI session</summary>
 
 1. **Validation**:  
 * Tells the user everything that'll be deployed and asks for confirmation. 
