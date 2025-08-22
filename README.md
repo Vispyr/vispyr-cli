@@ -20,9 +20,9 @@ When deploying, it automates the creation of:
 
 ## Requirements
 
-1. AWS credentials and region of the EC2 where your application runs.
+1. AWS credentials and the region of the EC2 where your application runs.
 2. The corresponding VPC ID.
-3. (Optional) Custom domain and email if the user wants to access Vispyr dashboard from their own domain.
+3. (Optional) Custom domain and email if the user wants to access the Vispyr dashboard from their domain.
 
 ## Instructions to Deploy
 
@@ -50,7 +50,7 @@ You'll find `<your_access_key_id>` and `<your_aws_secret_access_key>` in the use
 
 <details>
     <summary>Optional</summary>
-    Provide values for <code>VISPYR_DOMAIN</code> and <code>VISPYR_EMAIL</code> if you would like to access Vispyr dashboard from your own, custom, UREL. They are used by Certbot for generating TLS certification. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure <code>domainname.com</code> and the email can be any valid email, such as <code>myemail@gmail.com</code>.
+    Provide values for <code>VISPYR_DOMAIN</code> and <code>VISPYR_EMAIL</code> if you would like to access the Vispyr dashboard from your own, custom, UREL. They are used by Certbot for generating TLS certificates. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure <code>domainname.com</code>, and the email can be any valid email, such as <code>myemail@gmail.com</code>.
 </details>
 
 Now run:
@@ -67,7 +67,7 @@ To execute the CLI program, from the root directory run:
 npm run build && npm start -- deploy
 ```
 
-This will prompt you to select the desired CIDR range. Then you'll select the Subnet you wish to link to [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") (should be the same where the app being instrumented is). And finally you'll be prompted to confirm the deployment.
+This will prompt you to select the desired CIDR range. Then you'll select the Subnet you wish to link to [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") (should be the same where the app being instrumented is). And finally, you'll be prompted to confirm the deployment.
 
 This process usually takes between 5-10 minutes.
 
@@ -95,18 +95,18 @@ You will be given some "Next Steps" instructions. They include the Grafana link 
 * Deploys AWS resources showing real-time CloudFormation progress and waits for completion.
 4. **Post-deployment setup**: 
 * Gets the deployed infrastructure details. 
-* Uses those details to generate the configuration used by Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). 
+* Uses those details to generate the configuration used by the Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). 
 * If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates. 
 * Tests that the VPC peering and networking are working correctly.
 5. **User information**: 
 * Provides URL for accessing Vispyr's dashboard in Grafana's UI. 
-* Displays instructions for setting up Agent from folder containing all pertinent configuration.
+* Displays instructions for setting up the Agent from the folder containing all pertinent configuration.
 
 </details>
 
 ### Deploying the Vispyr Agent
 
-Place the `vispyr_agent` folder, mentioned the "Next Steps" of the CLI session, in the root directory of your application (same location as the `package.json`).
+Place the `vispyr_agent` folder, mentioned in the "Next Steps" of the CLI session, in the root directory of your application (same location as the `package.json`).
 
 Now edit `package.json` and modify the production start command of the application to:
 
@@ -153,7 +153,7 @@ The CLI will provide guidance on manual cleanup if automatic teardown fails.
 
 Remove the `vispyr_agent` folder and its contents from your application and redeploy it.
 
-Edit your `package.json` start command back to its initial form, i.e. instead of:
+Edit your `package.json` start command back to its initial form, i.e., instead of:
 ```
 bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/<your-app-name>.js
 ```
