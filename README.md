@@ -18,15 +18,15 @@ When deploying, it automates the creation of:
 * Routing and security group rules.
 * [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend").
 
-## Requirements
+# Requirements
 
 1. AWS credentials and the region of the EC2 where your application runs.
 2. The corresponding VPC ID.
 3. (Optional) Custom domain and email if the user wants to access the Vispyr dashboard from their domain.
 
-## Instructions to Deploy
+# Instructions to Deploy
 
-### Initial setup
+## Initial setup
 
 Clone this repository and navigate to its root directory:
 ```
@@ -60,7 +60,7 @@ Now run:
 npm install
 ```
 
-### CLI session
+## CLI session
 
 To execute the CLI program, from the root directory run:
 
@@ -106,7 +106,7 @@ You will be given some "Next Steps" instructions. They include the Grafana link 
 
 </details>
 
-### Deploying the Vispyr Agent
+## Deploying the Vispyr Agent
 
 Place the `vispyr_agent` folder, mentioned in the "Next Steps" of the CLI session, in the root directory of your application (same location as the `package.json`).
 
@@ -133,7 +133,7 @@ If using <code>.env</code> in your production environment, go back to <code>pack
 
 Redeploy and restart your app through your regular CI/CD process.
 
-## Instructions to Teardown
+# Instructions to Teardown
 
 To completely remove all of [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") and its infrastructure from your AWS account, go to the CLI root directory and run:
 
