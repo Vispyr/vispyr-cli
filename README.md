@@ -26,7 +26,7 @@ When deploying, it automates the creation of:
 
 # Instructions to Deploy
 
-## Initial setup
+## 1. Initial setup
 
 Clone this repository and navigate to its root directory:
 ```
@@ -60,7 +60,7 @@ Now run:
 npm install
 ```
 
-## CLI session
+## 2. CLI session
 
 To execute the CLI program, from the root directory run:
 
@@ -106,7 +106,7 @@ You will be given some "Next Steps" instructions. They include the Grafana link 
 
 </details>
 
-## Deploying the Vispyr Agent
+## 3. Deploying the Vispyr Agent
 
 Place the `vispyr_agent` folder, mentioned in the "Next Steps" of the CLI session, in the root directory of your application (same location as the `package.json`).
 
