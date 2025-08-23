@@ -81,32 +81,36 @@ This process usually takes between 5-10 minutes.
 You will be given some "Next Steps" instructions. They include the Grafana link and the location of the `vispyr_agent` folder.
 
 <details>
-
 <summary>Click here for a detailed, step-by-step description of the CLI session</summary>
 
-    <br>
+<br>
 
-    1. **Validation**:  
-        * Tells the user everything that'll be deployed and asks for confirmation. 
-        * Ensures all the necessary AWS credentials are present.
-    2. **Network discovery**: 
-        * Finds the peering VPC. 
-        * Generates non-overlapping CIDR. 
-        * Queries the user for subnet selection.
-    3. **Infrastructure deployment**: 
-        * Converts TypeScript CDK code into JSON CloudFormation template and saves it in the cdk.out/ directory. 
-        * Sets up the CDK prerequisites in your AWS account: S3 bucket for storing assets and IAM roles for the CDK operations.
-        * Deploys AWS resources showing real-time CloudFormation progress and waits for completion.
-    4. **Post-deployment setup**: 
-        * Gets the deployed infrastructure details. 
-        * Uses those details to generate the configuration used by the Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). 
-        * If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates. 
-        * Tests that the VPC peering and networking are working correctly.
-    5. **User information**: 
-        * Provides URL for accessing Vispyr's dashboard in Grafana's UI. 
-        * Displays instructions for setting up the Agent from the folder containing all pertinent configuration.
+1. **Validation**  
+   * Tells the user everything that'll be deployed and asks for confirmation. 
+   * Ensures all the necessary AWS credentials are present.
+
+2. **Network discovery**  
+   * Finds the peering VPC. 
+   * Generates non-overlapping CIDR. 
+   * Queries the user for subnet selection.
+
+3. **Infrastructure deployment**  
+   * Converts TypeScript CDK code into JSON CloudFormation template and saves it in the `cdk.out/` directory. 
+   * Sets up the CDK prerequisites in your AWS account: S3 bucket for storing assets and IAM roles for the CDK operations.
+   * Deploys AWS resources showing real-time CloudFormation progress and waits for completion.
+
+4. **Post-deployment setup**  
+   * Gets the deployed infrastructure details. 
+   * Uses those details to generate the configuration used by the Vispyr agent to connect to the [backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend"). 
+   * If the user included a domain in its `.env` file, it then shows instructions on how to set up SSL certificates. 
+   * Tests that the VPC peering and networking are working correctly.
+
+5. **User information**  
+   * Provides URL for accessing Vispyr's dashboard in Grafana's UI. 
+   * Displays instructions for setting up the Agent from the folder containing all pertinent configuration.
 
 </details>
+
 
 ## 3. Deploying the Vispyr Agent
 
