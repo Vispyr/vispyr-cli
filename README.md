@@ -4,7 +4,7 @@
   </a>
 </div>
 
-# What the CLI does
+# Overview
 
 The **Vispyr Command Line Interface** has 2 basic functions:
 
@@ -51,7 +51,7 @@ You'll find `<your_access_key_id>` and `<your_aws_secret_access_key>` in the use
 <details>
     <summary>Optional</summary>
     <br>
-    Provide values for <code>VISPYR_DOMAIN</code> and <code>VISPYR_EMAIL</code> if you would like to access the Vispyr dashboard from your own, custom, UREL. They are used by Certbot for generating TLS certificates. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure <code>domainname.com</code>, and the email can be any valid email, such as <code>myemail@gmail.com</code>.
+    Provide values for <code>VISPYR_DOMAIN</code> and <code>VISPYR_EMAIL</code> if you would like to access the Vispyr dashboard from your own, custom, URL. They are used by Certbot for generating TLS certificates. If not provided, the CLI will default to a self-signed certificate, which will then cause the browser to show a warning every time the dashboard is loaded. The domain should follow the structure <code>domainname.com</code>, and the email can be any valid email, such as <code>myemail@gmail.com</code>.
 </details>
 
 Now run:
@@ -68,7 +68,7 @@ To execute the CLI program, from the root directory run:
 npm run build && npm start -- deploy
 ```
 
-This will prompt you to select the desired CIDR range. Then you'll select the Subnet you wish to link to [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") (should be the same where the app being instrumented is). And finally, you'll be prompted to confirm the deployment.
+This will prompt you to select the desired CIDR range. Then you'll select the Subnet you wish to link to [Vispyr's backend](https://github.com/Vispyr/vispyr-backend "Go to Vispyr backend") (this should be the same subnet used by the application you’re trying to instrument). And finally, you'll be prompted to confirm the deployment.
 
 This process usually takes between 5-10 minutes.
 
@@ -141,7 +141,7 @@ To completely remove all of [Vispyr's backend](https://github.com/Vispyr/vispyr-
 npm start -- destroy
 ```
 
-It will prompt you for confirmation. By continuing, you'll see status updates until a success message is presented. The teardown process will automatically clean up **all** Vispyr-related resources:
+The CLI will prompt you for confirmation. By continuing, you'll see status updates until a success message is presented. The teardown process will automatically clean up **all** Vispyr-related resources:
 - **VispyrStack** (CloudFormation stack with all resources)
 - **Vispyr EC2 Instance** (monitoring server)
 - **Elastic IP** (static IP for the instance)
@@ -156,11 +156,4 @@ The CLI will provide guidance on manual cleanup if automatic teardown fails.
 
 Remove the `vispyr_agent` folder and its contents from your application and redeploy it.
 
-Edit your `package.json` start command back to its initial form, i.e., instead of:
-```
-bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/<your-app-name>.js
-```
-Something similar to:
-```
-node src/<your-app-name>
-```
+Edit your `package.json` start command back to its initial form.
