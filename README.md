@@ -119,7 +119,7 @@ Place the `vispyr_agent` folder, mentioned in the "Next Steps" of the CLI sessio
 Now edit `package.json` and modify the production start command of the application to:
 
 ```
-bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js src/<your-app-name>.js
+bash ./vispyr_agent/deployAgent.sh && node --require ./vispyr_agent/instrumentation.js <path_to_your_app>
 ```
 
 `<your-app-name>` refers to the file name of your NodeJS application.
