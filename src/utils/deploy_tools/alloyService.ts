@@ -67,13 +67,9 @@ otelcol.receiver.otlp "default" {
     endpoint = "0.0.0.0:4317"
   }
 
-  http {
-    endpoint = "0.0.0.0:4318"
-  }
-
   output {
-    traces = [ otelcol.connector.spanmetrics.default.input, otelcol.exporter.otlp.gateway_collector.input]
-    metrics = [otelcol.exporter.otlp.gateway_collector.input]
+    traces = [otelcol.connector.spanmetrics.default.input, otelcol.processor.batch.sdk_telemetry.input]
+    metrics = [otelcol.processor.batch.sdk_telemetry.input]
   }
 }
 
@@ -116,7 +112,7 @@ otelcol.connector.spanmetrics "default" {
   metrics_flush_interval = "15s"
   namespace = "traces.spanmetrics"
   output {
-    metrics = [otelcol.exporter.otlp.gateway_collector.input]
+    metrics = [otelcol.processor.batch.sdk_telemetry.input]
   }
 }
 

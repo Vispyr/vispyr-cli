@@ -22,14 +22,18 @@ const createInstanceWithEip = (
   vpc: Vpc,
   securityGroup: SecurityGroup,
   role: Role,
+  bucketName: string,
+  region: string,
   domain?: string,
   email?: string
 ): InstanceSetupResult => {
-  const userData = generateUserData(vispyrBackendCommands(domain, email));
+  const userData = generateUserData(
+    vispyrBackendCommands(bucketName, region, domain, email)
+  );
 
   const instance = new Instance(scope, 'VispyrBackend', {
     vpc,
-    instanceType: new InstanceType('t3.small'),
+    instanceType: new InstanceType('t3.medium'),
     machineImage: MachineImage.latestAmazonLinux2023(),
     role,
     securityGroup,

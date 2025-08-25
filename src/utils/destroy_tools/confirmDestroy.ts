@@ -6,6 +6,7 @@ const message = `The following will be permanently deleted:
 - Vispyr Backend EC2 Instance
 - VispyrStack on CloudFormation
 - CDKToolkit + CDK S3 Bucket (unless you have other stacks)
+- S3 Bucket for traces
 - SSM Parameters for Vispyr Backend
 - Vispyr Elastic IP + NAT Gateway
 - Routes used for VPC Peering connection
